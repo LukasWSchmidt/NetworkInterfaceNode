@@ -1,8 +1,8 @@
-../Core/Src/main.c:74:1:__io_putchar	1
-../Core/Src/main.c:79:1:__io_getchar	1
-../Core/Src/main.c:93:5:main	1
-../Core/Src/main.c:145:6:SystemClock_Config	3
-../Core/Src/main.c:189:6:updateStateLights	3
-../Core/Src/main.c:208:6:HAL_TIM_IC_CaptureCallback	2
-../Core/Src/main.c:228:6:HAL_TIM_OC_DelayElapsedCallback	4
-../Core/Src/main.c:261:6:Error_Handler	1
+../Core/Src/main.c:94:1:__io_putchar	1
+../Core/Src/main.c:99:1:__io_getchar	1
+../Core/Src/main.c:113:5:main	1
+../Core/Src/main.c:166:6:SystemClock_Config	3
+../Core/Src/main.c:210:6:updateStateLights	3
+../Core/Src/main.c:232:6:HAL_TIM_IC_CaptureCallback	2
+../Core/Src/main.c:252:6:HAL_TIM_OC_DelayElapsedCallback	4
+../Core/Src/main.c:286:6:Error_Handler	1

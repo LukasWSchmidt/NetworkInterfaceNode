@@ -35,6 +35,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define RCC_AHB1_ENR 0x40023830
+#define GPIOA_BASE 0x40020000
+#define GPIOA_EN 0
+
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 #define GETCHAR_PROTOTYPE int __io_getchar(void)
 
@@ -65,11 +69,27 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+typedef struct GPIO_t {
+	uint32_t moder;
+	uint32_t otyper;
+	uint32_t ospeedr;
+	uint32_t pupdr;
+	uint32_t idr;
+	uint32_t odr;
+	uint32_t bsrr;
+	uint32_t lckr;
+	uint32_t afrl;
+	uint32_t afrh;
+
+} GPIO_t;
+
+volatile GPIO_t* gpioa = (GPIO_t*)GPIOA_BASE;
+
 volatile uint32_t capture_val = 0;
 volatile uint32_t compare_val = 0;
-volatile uint32_t delay_us = 1110;
+volatile uint32_t delay_us = 1131;
 int CurrentState = IDLE_STATE;
-int pinValue = 0;
+uint8_t pinValue = 0;
 
 PUTCHAR_PROTOTYPE
 {
@@ -96,6 +116,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
 	setvbuf(stdin, NULL, _IONBF, 0);
 
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -119,7 +140,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  printf("Hello World!\n");
+  //printf("Hello World!\n");
   CurrentState = IDLE_STATE;
   updateStateLights();
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
@@ -129,8 +150,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  printf("Captured Val: %i\tCurrent State: %i\tPin Value: %d\n", capture_val, CurrentState, pinValue);
-	  HAL_Delay(1000);
+	  //printf("Captured Val: %i\tCurrent State: %i\tPin Value: %d\n", capture_val, CurrentState, pinValue);
+	  //HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -189,16 +210,19 @@ void SystemClock_Config(void)
 void updateStateLights(){
 	if(CurrentState == 0){
 		//IDLE LED
+		//gpioa->odr |= (001<<IDLE_LED_Pin);
 		HAL_GPIO_WritePin(ERR_LED_GPIO_Port, ERR_LED_Pin, 0);
 		HAL_GPIO_WritePin(BUSY_LED_GPIO_Port, BUSY_LED_Pin, 0);
 		HAL_GPIO_WritePin(IDLE_LED_GPIO_Port, IDLE_LED_Pin, 1);
 	} else if(CurrentState == 1){
 		//BUSY LED
+		//gpioa->odr |= (010<<IDLE_LED_Pin);
 		HAL_GPIO_WritePin(ERR_LED_GPIO_Port, ERR_LED_Pin, 0);
 		HAL_GPIO_WritePin(BUSY_LED_GPIO_Port, BUSY_LED_Pin, 1);
 		HAL_GPIO_WritePin(IDLE_LED_GPIO_Port, IDLE_LED_Pin, 0);
 	} else {
 		//ERR
+		//gpioa->odr |= (100<<IDLE_LED_Pin);
 		HAL_GPIO_WritePin(ERR_LED_GPIO_Port, ERR_LED_Pin, 1);
 		HAL_GPIO_WritePin(BUSY_LED_GPIO_Port, BUSY_LED_Pin, 0);
 		HAL_GPIO_WritePin(IDLE_LED_GPIO_Port, IDLE_LED_Pin, 0);
@@ -229,6 +253,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
         //Error or Idle, do Idle pattern if line is high
 
+    	//pinValue = gpioa->idr(0b1 & (1<<15));
     	pinValue = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
     	if(pinValue == 1){
     		//IDLE
