@@ -81,8 +81,8 @@ void Error_Handler(void);
 #define ERR_LED_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-#define HALF_PERIOD 500
-#define FULL_PERIOD 1000
+#define HALF_PERIOD 499
+#define FULL_PERIOD 999
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

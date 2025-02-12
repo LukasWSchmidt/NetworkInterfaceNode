@@ -39,9 +39,9 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  17 .debug_line   0000f2a9  00000000  00000000  0003431c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000903b3  00000000  00000000  000435c5  2**0
+ 18 .debug_str    000903b2  00000000  00000000  000435c5  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  000d3978  2**0
+ 19 .comment      00000043  00000000  00000000  000d3977  2**0
                   CONTENTS, READONLY
  20 .debug_frame  00004b44  00000000  00000000  000d39bc  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -1714,15 +1714,15 @@ int main(void)
 			__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
  8001266:	4b22      	ldr	r3, [pc, #136]	@ (80012f0 <main+0x178>)
  8001268:	681b      	ldr	r3, [r3, #0]
- 800126a:	f44f 72fa 	mov.w	r2, #500	@ 0x1f4
+ 800126a:	f240 12f3 	movw	r2, #499	@ 0x1f3
  800126e:	62da      	str	r2, [r3, #44]	@ 0x2c
  8001270:	4b1f      	ldr	r3, [pc, #124]	@ (80012f0 <main+0x178>)
- 8001272:	f44f 72fa 	mov.w	r2, #500	@ 0x1f4
+ 8001272:	f240 12f3 	movw	r2, #499	@ 0x1f3
  8001276:	60da      	str	r2, [r3, #12]
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
  8001278:	4b1d      	ldr	r3, [pc, #116]	@ (80012f0 <main+0x178>)
  800127a:	681b      	ldr	r3, [r3, #0]
- 800127c:	f44f 72fa 	mov.w	r2, #500	@ 0x1f4
+ 800127c:	f240 12f3 	movw	r2, #499	@ 0x1f3
  8001280:	641a      	str	r2, [r3, #64]	@ 0x40
  8001282:	e018      	b.n	80012b6 <main+0x13e>
 		  } else {
@@ -1742,15 +1742,15 @@ int main(void)
 			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
  800129a:	4b15      	ldr	r3, [pc, #84]	@ (80012f0 <main+0x178>)
  800129c:	681b      	ldr	r3, [r3, #0]
- 800129e:	f44f 727a 	mov.w	r2, #1000	@ 0x3e8
+ 800129e:	f240 32e7 	movw	r2, #999	@ 0x3e7
  80012a2:	62da      	str	r2, [r3, #44]	@ 0x2c
  80012a4:	4b12      	ldr	r3, [pc, #72]	@ (80012f0 <main+0x178>)
- 80012a6:	f44f 727a 	mov.w	r2, #1000	@ 0x3e8
+ 80012a6:	f240 32e7 	movw	r2, #999	@ 0x3e7
  80012aa:	60da      	str	r2, [r3, #12]
 			  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
  80012ac:	4b10      	ldr	r3, [pc, #64]	@ (80012f0 <main+0x178>)
  80012ae:	681b      	ldr	r3, [r3, #0]
- 80012b0:	f44f 727a 	mov.w	r2, #1000	@ 0x3e8
+ 80012b0:	f240 32e7 	movw	r2, #999	@ 0x3e7
  80012b4:	641a      	str	r2, [r3, #64]	@ 0x40
 		  }
 		  if(CurrentState == IDLE_STATE) {
@@ -2301,15 +2301,15 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
         	__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
  8001650:	4b35      	ldr	r3, [pc, #212]	@ (8001728 <HAL_TIM_OC_DelayElapsedCallback+0x17c>)
  8001652:	681b      	ldr	r3, [r3, #0]
- 8001654:	f44f 72fa 	mov.w	r2, #500	@ 0x1f4
+ 8001654:	f240 12f3 	movw	r2, #499	@ 0x1f3
  8001658:	62da      	str	r2, [r3, #44]	@ 0x2c
  800165a:	4b33      	ldr	r3, [pc, #204]	@ (8001728 <HAL_TIM_OC_DelayElapsedCallback+0x17c>)
- 800165c:	f44f 72fa 	mov.w	r2, #500	@ 0x1f4
+ 800165c:	f240 12f3 	movw	r2, #499	@ 0x1f3
  8001660:	60da      	str	r2, [r3, #12]
 	        __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
  8001662:	4b31      	ldr	r3, [pc, #196]	@ (8001728 <HAL_TIM_OC_DelayElapsedCallback+0x17c>)
  8001664:	681b      	ldr	r3, [r3, #0]
- 8001666:	f44f 72fa 	mov.w	r2, #500	@ 0x1f4
+ 8001666:	f240 12f3 	movw	r2, #499	@ 0x1f3
  800166a:	641a      	str	r2, [r3, #64]	@ 0x40
  800166c:	e018      	b.n	80016a0 <HAL_TIM_OC_DelayElapsedCallback+0xf4>
         } else {
@@ -2329,15 +2329,15 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
         	__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
  8001684:	4b28      	ldr	r3, [pc, #160]	@ (8001728 <HAL_TIM_OC_DelayElapsedCallback+0x17c>)
  8001686:	681b      	ldr	r3, [r3, #0]
- 8001688:	f44f 727a 	mov.w	r2, #1000	@ 0x3e8
+ 8001688:	f240 32e7 	movw	r2, #999	@ 0x3e7
  800168c:	62da      	str	r2, [r3, #44]	@ 0x2c
  800168e:	4b26      	ldr	r3, [pc, #152]	@ (8001728 <HAL_TIM_OC_DelayElapsedCallback+0x17c>)
- 8001690:	f44f 727a 	mov.w	r2, #1000	@ 0x3e8
+ 8001690:	f240 32e7 	movw	r2, #999	@ 0x3e7
  8001694:	60da      	str	r2, [r3, #12]
             __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
  8001696:	4b24      	ldr	r3, [pc, #144]	@ (8001728 <HAL_TIM_OC_DelayElapsedCallback+0x17c>)
  8001698:	681b      	ldr	r3, [r3, #0]
- 800169a:	f44f 727a 	mov.w	r2, #1000	@ 0x3e8
+ 800169a:	f240 32e7 	movw	r2, #999	@ 0x3e7
  800169e:	641a      	str	r2, [r3, #64]	@ 0x40
         }
     	if(!end_of_transmission && (manchester_bit_count <= 16)) {
