@@ -332,6 +332,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		CurrentState = ERR_STATE;
     		updateStateLights();
     		HAL_TIM_OC_Stop_IT(&htim3, TIM_CHANNEL_4);
+    		//transmitting = false;
     		//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
     	}
 
@@ -358,6 +359,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		}
     	} else if(manchester_bit_count == 0) {
     		HAL_TIM_OC_Stop_IT(&htim3, TIM_CHANNEL_4);
+    		transmitting = false;
     		//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
     	}
 

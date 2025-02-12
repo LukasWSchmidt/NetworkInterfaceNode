@@ -6,4 +6,4 @@
 ../Core/Src/main.c:276:10:getNextTransmissionChar	9
 ../Core/Src/main.c:298:6:HAL_TIM_IC_CaptureCallback	2
 ../Core/Src/main.c:318:6:HAL_TIM_OC_DelayElapsedCallback	12
-../Core/Src/main.c:383:6:Error_Handler	1
+../Core/Src/main.c:385:6:Error_Handler	1
