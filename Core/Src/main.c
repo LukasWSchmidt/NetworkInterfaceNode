@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdbool.h>
 
 /* USER CODE END Includes */
 
@@ -90,6 +91,14 @@ volatile uint32_t compare_val = 0;
 volatile uint32_t delay_us = 1131;
 int CurrentState = IDLE_STATE;
 uint8_t pinValue = 0;
+volatile bool transmitting = false;
+
+char transmit_buffer[255];
+volatile uint32_t manchester_buffer = 0;
+uint8_t manchester_bit_count = 0;
+uint8_t transmit_buffer_index = 0;
+volatile bool end_of_transmission = false;
+
 
 PUTCHAR_PROTOTYPE
 {
@@ -103,6 +112,9 @@ GETCHAR_PROTOTYPE
  HAL_UART_Receive(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
  return ch;
 }
+
+void updateStateLights();
+uint16_t getNextTransmissionChar(bool first);
 
 /* USER CODE END 0 */
 
@@ -139,6 +151,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   //printf("Hello World!\n");
   CurrentState = IDLE_STATE;
@@ -152,6 +165,37 @@ int main(void)
   {
 	  //printf("Captured Val: %i\tCurrent State: %i\tPin Value: %d\n", capture_val, CurrentState, pinValue);
 	  //HAL_Delay(1000);
+	  if(!transmitting) {
+		  fgets(transmit_buffer, 255, stdin);
+		  transmitting = true;
+		  manchester_buffer = 0;
+		  transmit_buffer_index = 0;
+		  end_of_transmission = false;
+		  manchester_buffer = getNextTransmissionChar(true);
+		  manchester_bit_count += 16;
+		  uint16_t temp = getNextTransmissionChar(false);
+		  if(temp != 0) {
+			  manchester_buffer |= (temp<<16);
+			  manchester_bit_count += 16;
+		  } else {
+			  end_of_transmission = true;
+		  }
+		  if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
+			manchester_buffer = manchester_buffer>>1;
+			manchester_bit_count--;
+			__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
+		  } else {
+			manchester_buffer = manchester_buffer>>2;
+			manchester_bit_count -= 2;
+			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
+			  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
+		  }
+		  if(CurrentState == IDLE_STATE) {
+			  HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_4);
+		  }
+
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -229,6 +273,28 @@ void updateStateLights(){
 	}
 }
 
+uint16_t getNextTransmissionChar(bool first) {
+	if(!first) {
+		transmit_buffer_index++;
+		if((transmit_buffer_index == 0) || (transmit_buffer[transmit_buffer_index] == '\n') || (transmit_buffer[transmit_buffer_index] == '\r')) {
+			end_of_transmission = true;
+			return 0;
+		}
+	} else if((transmit_buffer[transmit_buffer_index] == '\n') || (transmit_buffer[transmit_buffer_index] == '\r')) {
+		end_of_transmission = true;
+		return 0;
+	}
+	uint16_t reverse_manchester = 0;
+	for(uint8_t i = 0; i<8; i++) {
+		if(((transmit_buffer[transmit_buffer_index]>>(7-i))&0b1)==0b1) {
+			reverse_manchester |= (0b10<<(i*2));
+		} else {
+			reverse_manchester |= (0b01<<(i*2));
+		}
+	}
+	return reverse_manchester;
+}
+
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	//BUSY!
 	if (htim->Instance == TIM2) { // Ensure it's TIM2
@@ -259,9 +325,40 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		//IDLE
     		CurrentState = IDLE_STATE;
     		updateStateLights();
+    		if(transmitting) {
+  			  HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_4);
+    		}
     	} else {
     		CurrentState = ERR_STATE;
     		updateStateLights();
+    		HAL_TIM_OC_Stop_IT(&htim3, TIM_CHANNEL_4);
+    		//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
+    	}
+
+    } else if (htim->Instance == TIM3 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
+    	if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
+        	manchester_buffer = manchester_buffer>>1;
+        	manchester_bit_count--;
+        	__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+	        __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
+        } else {
+        	manchester_buffer = manchester_buffer>>2;
+        	manchester_bit_count -= 2;
+        	__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
+            __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
+        }
+    	if(!end_of_transmission && (manchester_bit_count <= 16)) {
+    		uint16_t reverse_manchester = getNextTransmissionChar(false);
+    		manchester_bit_count += 16;
+    		manchester_buffer &= 0xFF;
+    		if(reverse_manchester == 0) {
+    			end_of_transmission = true;
+    		} else {
+    			manchester_buffer |= (reverse_manchester<<16);
+    		}
+    	} else if(manchester_bit_count == 0) {
+    		HAL_TIM_OC_Stop_IT(&htim3, TIM_CHANNEL_4);
+    		//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
     	}
 
     }
