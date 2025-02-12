@@ -54,6 +54,9 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, IDLE_LED_Pin|BUSY_LED_Pin|ERR_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
@@ -69,11 +72,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Receiver_Pin */
-  GPIO_InitStruct.Pin = Receiver_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin : TRANSMIT_Pin */
+  GPIO_InitStruct.Pin = TRANSMIT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Receiver_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(TRANSMIT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : IDLE_LED_Pin BUSY_LED_Pin ERR_LED_Pin */
   GPIO_InitStruct.Pin = IDLE_LED_Pin|BUSY_LED_Pin|ERR_LED_Pin;

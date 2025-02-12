@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -89,16 +90,17 @@ volatile GPIO_t* gpioa = (GPIO_t*)GPIOA_BASE;
 volatile uint32_t capture_val = 0;
 volatile uint32_t compare_val = 0;
 volatile uint32_t delay_us = 1131;
-int CurrentState = IDLE_STATE;
+volatile int CurrentState = IDLE_STATE;
 uint8_t pinValue = 0;
 volatile bool transmitting = false;
 
-char transmit_buffer[255];
+volatile char transmit_buffer[255];
 volatile uint32_t manchester_buffer = 0;
-uint8_t manchester_bit_count = 0;
-uint8_t transmit_buffer_index = 0;
+volatile uint8_t manchester_bit_count = 0;
+volatile uint8_t transmit_buffer_index = 0;
 volatile bool end_of_transmission = false;
 
+//uint16_t test_input[255] = {0};
 
 PUTCHAR_PROTOTYPE
 {
@@ -156,6 +158,9 @@ int main(void)
   //printf("Hello World!\n");
   CurrentState = IDLE_STATE;
   updateStateLights();
+  //RCC->APB2ENR |= RCC_APB2ENR_DBGMCUEN; //enable MCU debug module clock
+//  __HAL_DBGMCU_FREEZE_TIM2();
+//  __HAL_DBGMCU_FREEZE_TIM3();
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
@@ -166,19 +171,34 @@ int main(void)
 	  //printf("Captured Val: %i\tCurrent State: %i\tPin Value: %d\n", capture_val, CurrentState, pinValue);
 	  //HAL_Delay(1000);
 	  if(!transmitting) {
-		  fgets(transmit_buffer, 255, stdin);
+		  printf("Enter text to transmit: ");
+		  //fgets(transmit_buffer, 255, stdin);
+		  char temp_input[255];
+		  //scanf("%[^\n]s", temp_input);
+		  fgets(temp_input, 255, stdin);
+		  strncpy(transmit_buffer, temp_input, 255);
+		  printf("Stuff transmitted: %s\n", transmit_buffer);
 		  transmitting = true;
 		  manchester_buffer = 0;
 		  transmit_buffer_index = 0;
 		  end_of_transmission = false;
 		  manchester_buffer = getNextTransmissionChar(true);
+		  //test_input[0] = getNextTransmissionChar(true);
 		  manchester_bit_count += 16;
 		  uint16_t temp = getNextTransmissionChar(false);
+//		  while(!end_of_transmission) {
+//			  test_input[transmit_buffer_index] = getNextTransmissionChar(false);
+//		  }
 		  if(temp != 0) {
 			  manchester_buffer |= (temp<<16);
 			  manchester_bit_count += 16;
 		  } else {
 			  end_of_transmission = true;
+		  }
+		  if((manchester_buffer & 0b1) == 0b1) {
+				HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
+		  } else {
+				HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 0);
 		  }
 		  if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
 			manchester_buffer = manchester_buffer>>1;
@@ -189,7 +209,7 @@ int main(void)
 			manchester_buffer = manchester_buffer>>2;
 			manchester_bit_count -= 2;
 			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
-			  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
 		  }
 		  if(CurrentState == IDLE_STATE) {
 			  HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_4);
@@ -275,7 +295,7 @@ void updateStateLights(){
 
 uint16_t getNextTransmissionChar(bool first) {
 	if(!first) {
-		transmit_buffer_index++;
+		//transmit_buffer_index++;
 		if((transmit_buffer_index == 0) || (transmit_buffer[transmit_buffer_index] == '\n') || (transmit_buffer[transmit_buffer_index] == '\r')) {
 			end_of_transmission = true;
 			return 0;
@@ -292,6 +312,7 @@ uint16_t getNextTransmissionChar(bool first) {
 			reverse_manchester |= (0b01<<(i*2));
 		}
 	}
+	transmit_buffer_index++;
 	return reverse_manchester;
 }
 
@@ -337,6 +358,11 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     	}
 
     } else if (htim->Instance == TIM3 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
+    	if((manchester_buffer & 0b1) == 0b1) {
+			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
+		} else {
+			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 0);
+		}
     	if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
         	manchester_buffer = manchester_buffer>>1;
         	manchester_bit_count--;
@@ -348,6 +374,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
         	__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
             __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
         }
+		//HAL_GPIO_TogglePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin);
     	if(!end_of_transmission && (manchester_bit_count <= 16)) {
     		uint16_t reverse_manchester = getNextTransmissionChar(false);
     		manchester_bit_count += 16;

@@ -69,8 +69,8 @@ void Error_Handler(void);
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
-#define Receiver_Pin GPIO_PIN_11
-#define Receiver_GPIO_Port GPIOC
+#define TRANSMIT_Pin GPIO_PIN_11
+#define TRANSMIT_GPIO_Port GPIOC
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 #define IDLE_LED_Pin GPIO_PIN_5
