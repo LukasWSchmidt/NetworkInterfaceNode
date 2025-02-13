@@ -82,7 +82,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 #define HALF_PERIOD 499
-#define FULL_PERIOD 999
+//#define FULL_PERIOD 999
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
