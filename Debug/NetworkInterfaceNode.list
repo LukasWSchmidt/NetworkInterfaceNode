@@ -1340,12 +1340,12 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
  800100a:	2300      	movs	r3, #0
  800100c:	613b      	str	r3, [r7, #16]
- 800100e:	4b41      	ldr	r3, [pc, #260]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 800100e:	4b45      	ldr	r3, [pc, #276]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001010:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
- 8001012:	4a40      	ldr	r2, [pc, #256]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 8001012:	4a44      	ldr	r2, [pc, #272]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001014:	f043 0304 	orr.w	r3, r3, #4
  8001018:	6313      	str	r3, [r2, #48]	@ 0x30
- 800101a:	4b3e      	ldr	r3, [pc, #248]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 800101a:	4b42      	ldr	r3, [pc, #264]	@ (8001124 <MX_GPIO_Init+0x130>)
  800101c:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
  800101e:	f003 0304 	and.w	r3, r3, #4
  8001022:	613b      	str	r3, [r7, #16]
@@ -1353,12 +1353,12 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
  8001026:	2300      	movs	r3, #0
  8001028:	60fb      	str	r3, [r7, #12]
- 800102a:	4b3a      	ldr	r3, [pc, #232]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 800102a:	4b3e      	ldr	r3, [pc, #248]	@ (8001124 <MX_GPIO_Init+0x130>)
  800102c:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
- 800102e:	4a39      	ldr	r2, [pc, #228]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 800102e:	4a3d      	ldr	r2, [pc, #244]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001030:	f043 0380 	orr.w	r3, r3, #128	@ 0x80
  8001034:	6313      	str	r3, [r2, #48]	@ 0x30
- 8001036:	4b37      	ldr	r3, [pc, #220]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 8001036:	4b3b      	ldr	r3, [pc, #236]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001038:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
  800103a:	f003 0380 	and.w	r3, r3, #128	@ 0x80
  800103e:	60fb      	str	r3, [r7, #12]
@@ -1366,12 +1366,12 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
  8001042:	2300      	movs	r3, #0
  8001044:	60bb      	str	r3, [r7, #8]
- 8001046:	4b33      	ldr	r3, [pc, #204]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 8001046:	4b37      	ldr	r3, [pc, #220]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001048:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
- 800104a:	4a32      	ldr	r2, [pc, #200]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 800104a:	4a36      	ldr	r2, [pc, #216]	@ (8001124 <MX_GPIO_Init+0x130>)
  800104c:	f043 0301 	orr.w	r3, r3, #1
  8001050:	6313      	str	r3, [r2, #48]	@ 0x30
- 8001052:	4b30      	ldr	r3, [pc, #192]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 8001052:	4b34      	ldr	r3, [pc, #208]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001054:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
  8001056:	f003 0301 	and.w	r3, r3, #1
  800105a:	60bb      	str	r3, [r7, #8]
@@ -1379,12 +1379,12 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
  800105e:	2300      	movs	r3, #0
  8001060:	607b      	str	r3, [r7, #4]
- 8001062:	4b2c      	ldr	r3, [pc, #176]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 8001062:	4b30      	ldr	r3, [pc, #192]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001064:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
- 8001066:	4a2b      	ldr	r2, [pc, #172]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 8001066:	4a2f      	ldr	r2, [pc, #188]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001068:	f043 0302 	orr.w	r3, r3, #2
  800106c:	6313      	str	r3, [r2, #48]	@ 0x30
- 800106e:	4b29      	ldr	r3, [pc, #164]	@ (8001114 <MX_GPIO_Init+0x120>)
+ 800106e:	4b2d      	ldr	r3, [pc, #180]	@ (8001124 <MX_GPIO_Init+0x130>)
  8001070:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
  8001072:	f003 0302 	and.w	r3, r3, #2
  8001076:	607b      	str	r3, [r7, #4]
@@ -1485,14 +1485,14 @@ void MX_GPIO_Init(void)
  8001108:	f000 ffa6 	bl	8002058 <HAL_GPIO_Init>
 
 }
- 800110c:	bf00      	nop
- 800110e:	3728      	adds	r7, #40	@ 0x28
- 8001110:	46bd      	mov	sp, r7
- 8001112:	bd80      	pop	{r7, pc}
- 8001114:	40023800 	.word	0x40023800
- 8001118:	40020000 	.word	0x40020000
- 800111c:	40020800 	.word	0x40020800
- 8001120:	40020400 	.word	0x40020400
+ 800111c:	bf00      	nop
+ 800111e:	3728      	adds	r7, #40	@ 0x28
+ 8001120:	46bd      	mov	sp, r7
+ 8001122:	bd80      	pop	{r7, pc}
+ 8001124:	40023800 	.word	0x40023800
+ 8001128:	40020000 	.word	0x40020000
+ 800112c:	40020800 	.word	0x40020800
+ 8001130:	40020400 	.word	0x40020400
 
 08001124 <__io_putchar>:
 //volatile uint16_t print_test_ind_index = 0;
@@ -1501,10 +1501,10 @@ void MX_GPIO_Init(void)
 
 PUTCHAR_PROTOTYPE
 {
- 8001124:	b580      	push	{r7, lr}
- 8001126:	b082      	sub	sp, #8
- 8001128:	af00      	add	r7, sp, #0
- 800112a:	6078      	str	r0, [r7, #4]
+ 8001134:	b580      	push	{r7, lr}
+ 8001136:	b082      	sub	sp, #8
+ 8001138:	af00      	add	r7, sp, #0
+ 800113a:	6078      	str	r0, [r7, #4]
  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
  800112c:	1d39      	adds	r1, r7, #4
  800112e:	f04f 33ff 	mov.w	r3, #4294967295
@@ -1512,7 +1512,7 @@ PUTCHAR_PROTOTYPE
  8001134:	4803      	ldr	r0, [pc, #12]	@ (8001144 <__io_putchar+0x20>)
  8001136:	f003 f8ed 	bl	8004314 <HAL_UART_Transmit>
  return ch;
- 800113a:	687b      	ldr	r3, [r7, #4]
+ 800114a:	687b      	ldr	r3, [r7, #4]
 }
  800113c:	4618      	mov	r0, r3
  800113e:	3708      	adds	r7, #8
@@ -1520,27 +1520,27 @@ PUTCHAR_PROTOTYPE
  8001142:	bd80      	pop	{r7, pc}
  8001144:	200003ac 	.word	0x200003ac
 
-08001148 <__io_getchar>:
+08001158 <__io_getchar>:
 GETCHAR_PROTOTYPE
 {
- 8001148:	b580      	push	{r7, lr}
- 800114a:	b082      	sub	sp, #8
- 800114c:	af00      	add	r7, sp, #0
+ 8001158:	b580      	push	{r7, lr}
+ 800115a:	b082      	sub	sp, #8
+ 800115c:	af00      	add	r7, sp, #0
  uint8_t ch = 0;
- 800114e:	2300      	movs	r3, #0
- 8001150:	71fb      	strb	r3, [r7, #7]
+ 800115e:	2300      	movs	r3, #0
+ 8001160:	71fb      	strb	r3, [r7, #7]
  __HAL_UART_CLEAR_OREFLAG(&huart2);
- 8001152:	2300      	movs	r3, #0
- 8001154:	603b      	str	r3, [r7, #0]
- 8001156:	4b0a      	ldr	r3, [pc, #40]	@ (8001180 <__io_getchar+0x38>)
- 8001158:	681b      	ldr	r3, [r3, #0]
- 800115a:	681b      	ldr	r3, [r3, #0]
- 800115c:	603b      	str	r3, [r7, #0]
- 800115e:	4b08      	ldr	r3, [pc, #32]	@ (8001180 <__io_getchar+0x38>)
- 8001160:	681b      	ldr	r3, [r3, #0]
- 8001162:	685b      	ldr	r3, [r3, #4]
+ 8001162:	2300      	movs	r3, #0
  8001164:	603b      	str	r3, [r7, #0]
- 8001166:	683b      	ldr	r3, [r7, #0]
+ 8001166:	4b0a      	ldr	r3, [pc, #40]	@ (8001190 <__io_getchar+0x38>)
+ 8001168:	681b      	ldr	r3, [r3, #0]
+ 800116a:	681b      	ldr	r3, [r3, #0]
+ 800116c:	603b      	str	r3, [r7, #0]
+ 800116e:	4b08      	ldr	r3, [pc, #32]	@ (8001190 <__io_getchar+0x38>)
+ 8001170:	681b      	ldr	r3, [r3, #0]
+ 8001172:	685b      	ldr	r3, [r3, #4]
+ 8001174:	603b      	str	r3, [r7, #0]
+ 8001176:	683b      	ldr	r3, [r7, #0]
  HAL_UART_Receive(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
  8001168:	1df9      	adds	r1, r7, #7
  800116a:	f04f 33ff 	mov.w	r3, #4294967295
@@ -1548,7 +1548,7 @@ GETCHAR_PROTOTYPE
  8001170:	4803      	ldr	r0, [pc, #12]	@ (8001180 <__io_getchar+0x38>)
  8001172:	f003 f95a 	bl	800442a <HAL_UART_Receive>
  return ch;
- 8001176:	79fb      	ldrb	r3, [r7, #7]
+ 8001186:	79fb      	ldrb	r3, [r7, #7]
 }
  8001178:	4618      	mov	r0, r3
  800117a:	3708      	adds	r7, #8
@@ -1556,7 +1556,7 @@ GETCHAR_PROTOTYPE
  800117e:	bd80      	pop	{r7, pc}
  8001180:	200003ac 	.word	0x200003ac
 
-08001184 <main>:
+08001194 <main>:
 /**
   * @brief  The application entry point.
   * @retval int
@@ -1603,7 +1603,6 @@ int main(void)
   MX_TIM3_Init();
  80011ac:	f000 fc70 	bl	8001a90 <MX_TIM3_Init>
   /* USER CODE BEGIN 2 */
-  //printf("Hello World!\n");
   CurrentState = IDLE_STATE;
  80011b0:	4b0c      	ldr	r3, [pc, #48]	@ (80011e4 <main+0x60>)
  80011b2:	2200      	movs	r2, #0
@@ -2406,10 +2405,9 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
  8001696:	2201      	movs	r2, #1
  8001698:	701a      	strb	r2, [r3, #0]
     		transmitting = false;
-    		//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
     	}
 
-    }*/
+    }
 }
  800169a:	e00d      	b.n	80016b8 <HAL_TIM_OC_DelayElapsedCallback+0x74>
     		CurrentState = ERR_STATE;
