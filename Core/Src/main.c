@@ -103,9 +103,9 @@ volatile uint8_t manchester_bit_count = 0;
 volatile uint8_t transmit_buffer_index = 0;
 volatile bool end_of_transmission = false;
 
-volatile uint16_t test_input[255] = {0};
-volatile uint8_t test_index = 0;
-volatile uint8_t test_index_2 = 0;
+//volatile uint16_t test_input[255] = {0};
+//volatile uint8_t test_index = 0;
+//volatile uint8_t test_index_2 = 0;
 
 volatile bool blue_debug_mode = false;
 
@@ -190,27 +190,32 @@ int main(void)
 //				  printf("%#08lX\n", print_test_man[i]);
 //			  }
 //		  }
-		  if(!blue_debug_mode) {
-			  printf("Enter regular text to transmit: ");
-		  } else {
-			  printf("Enter debug text to transmit (hex, no \"0x\"): ");
-		  }
+//		  if(!blue_debug_mode) {
+//			  printf("Enter regular text to transmit: ");
+//		  } else {
+//			  printf("Enter debug text to transmit (hex, no \"0x\"): ");
+//		  }
 		  //fgets(transmit_buffer, 255, stdin);
 		  char temp_input[255];
 		  //scanf("%[^\n]s", temp_input);
-		  fgets(temp_input, 255, stdin);
-		  strncpy(transmit_buffer, temp_input, 255);
-		  //printf("Stuff transmitted: %s\n", transmit_buffer);
-		  printf("Message sent\n");
-		  for(int i = 0; i <= 255; i++) {
-			  test_input[i] = 0;
-		  }
+//		  fgets(temp_input, 255, stdin);
+//		  strncpy(transmit_buffer, temp_input, 255);
+//		  //printf("Stuff transmitted: %s\n", transmit_buffer);
+//		  printf("Message sent\n");
+//		  for(int i = 0; i <= 255; i++) {
+//			  test_input[i] = 0;
+//		  }
 //		  for(int i = 0; i <= 512; i++) {
 //			  //print_test_man[i] = 0;
 //			  //print_test_ind[i] = 0;
 //		  }
 		  if(blue_debug_mode) {
 			  //invalid characters are skipped without inserting a 0
+			  printf("Enter debug text to transmit (hex, no \"0x\"): ");
+			  fgets(temp_input, 255, stdin);
+			  strncpy(transmit_buffer, temp_input, 255);
+			  //printf("Stuff transmitted: %s\n", transmit_buffer);
+			  printf("Message sent\n");
 			  char hex_conversion[255];
 			  //uint8_t hex_as_int[255] = {0};
 			  uint16_t index = 0;
@@ -245,12 +250,19 @@ int main(void)
 //
 //			  }
 			  strncpy(transmit_buffer, hex_conversion, 255);
+			  transmit_buffer[conversion_index] = '\n';
+		  } else {
+			  printf("Enter regular text to transmit: ");
+			  fgets(temp_input, 255, stdin);
+			  strncpy(transmit_buffer, temp_input, 255);
+			  //printf("Stuff transmitted: %s\n", transmit_buffer);
+			  printf("Message sent\n");
 		  }
 		  transmitting = true;
 		  //print_test_index = 0;
 		  //print_test_ind_index = 0;
-		  test_index = 0;
-		  test_index_2 = 0;
+//		  test_index = 0;
+//		  test_index_2 = 0;
 		  manchester_buffer = 0;
 		  transmit_buffer_index = 0;
 		  end_of_transmission = false;
@@ -524,12 +536,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			manchester_bit_count--;
 			//print_test_man[print_test_index] = manchester_buffer;
 			//print_test_index++;
-			if(test_index > 15) {
-				test_index = 0;
-				test_index_2++;
-			}
-			test_input[test_index_2] |= ((manchester_buffer&0b1)<<(15-test_index));
-			test_index++;
+//			if(test_index > 15) {
+//				test_index = 0;
+//				test_index_2++;
+//			}
+//			test_input[test_index_2] |= ((manchester_buffer&0b1)<<(15-test_index));
+//			test_index++;
 
 	//		if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
 	//			manchester_buffer = manchester_buffer>>1;
