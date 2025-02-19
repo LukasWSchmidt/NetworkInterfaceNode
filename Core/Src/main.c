@@ -123,7 +123,7 @@ volatile uint8_t receive_index = 0;
 volatile bool receiving = false;
 volatile uint32_t current_pin_state = 1;
 //volatile uint32_t previous_pin_state = 1; // idle is high
-uint8_t change_lights_flag = 0; //1 when lights need changing
+volatile uint8_t change_lights_flag = 0; //1 when lights need changing
 volatile bool end_reception_flag = false;;
 
 volatile bool middle_bit = true;
