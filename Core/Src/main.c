@@ -227,10 +227,11 @@ int main(void)
 //			  }
 		  if (receive_index > 0) {
 			  printf("Received: %s\n", receive_buffer);
-//				  for (int i = 0; i < receive_index; i++) {
-//					  printf("%c", receive_buffer[i]);
-//				  }
+			  for (int i = 0; i < receive_index; i++) {
+				  receive_buffer[i] = 0;
+			  }
 //				  printf("\n");
+
 		  }
 		  receive_index = 0;
 //		  bit_count = 0;
@@ -388,29 +389,29 @@ void SystemClock_Config(void)
 
 
 //helper function for ending reception and printing buffered message
-void end_reception() {
-	end_reception_flag = 0;
-    if (receiving) {
-        receiving = false;
-        if (bit_count > 0) {
-            // Discard incomplete byte
-        }
-        if (receive_index > 0) {
-            printf("Received: ");
-            for (int i = 0; i < receive_index; i++) {
-                printf("%c", receive_buffer[i]);
-            }
-            printf("\n");
-        }
-        receive_index = 0;
-        bit_count = 0;
-        current_partial_byte = 0;
-//        previous_pin_state = 1;
-        middle_bit = true;
-    }
-    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
-    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-}
+//void end_reception() {
+//	end_reception_flag = 0;
+//    if (receiving) {
+//        receiving = false;
+//        if (bit_count > 0) {
+//            // Discard incomplete byte
+//        }
+//        if (receive_index > 0) {
+//            printf("Received: ");
+//            for (int i = 0; i < receive_index; i++) {
+//                printf("%c", receive_buffer[i]);
+//            }
+//            printf("\n");
+//        }
+//        receive_index = 0;
+//        bit_count = 0;
+//        current_partial_byte = 0;
+////        previous_pin_state = 1;
+//        middle_bit = true;
+//    }
+//    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+//    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+//}
 
 
 void updateStateLights(){
@@ -518,7 +519,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 				bit_count++;
 
 				//Once 8 bits put byte into buffer
-				if(bit_count == 8){
+				if(bit_count >= 8){
 					receive_buffer[receive_index] = current_partial_byte;
 					receive_index++;
 					current_partial_byte = 0;
