@@ -52,6 +52,13 @@
 
 #define MASK_16_BITS 0x0000FFFF
 #define MASK_17_BITS 0x00007FFF
+
+//min an max based off of 1.32% tolerance
+#define HALF_BIT_DELTA_MIN 487
+#define HALF_BIT_DELTA_MAX 513
+
+#define FULL_BIT_DELTA_MIN 974
+#define FULL_BIT_DELTA_MAX 1026
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -106,6 +113,19 @@ volatile bool end_of_transmission = false;
 volatile uint16_t test_input[255] = {0};
 volatile uint8_t test_index = 0;
 volatile uint8_t test_index_2 = 0;
+
+//Receiver Variables
+volatile uint32_t previous_capture_val = 0;
+volatile uint8_t current_partial_byte = 0;
+volatile uint8_t bit_count = 0;
+volatile char receive_buffer[256];
+volatile uint8_t receive_index = 0;
+volatile bool receiving = false;
+volatile uint32_t current_pin_state = 1;
+volatile uint32_t previous_pin_state = 1; // idle is high
+uint8_t change_lights_flag = 0; //1 when lights need changing
+uint8_t end_reception_flag = 0;
+volatile uint32_t delta = 0;
 
 //volatile uint32_t print_test_man[512] = {0};
 //volatile uint16_t print_test_index = 0;
@@ -171,97 +191,123 @@ int main(void)
   //RCC->APB2ENR |= RCC_APB2ENR_DBGMCUEN; //enable MCU debug module clock
 //  __HAL_DBGMCU_FREEZE_TIM2();
 //  __HAL_DBGMCU_FREEZE_TIM3();
+
+  //Start timer for channel monitor/receiver
+//  printf("Sanity Check\n");
+//
+//  receiving = true;
+//  receive_buffer[0] = 'a';
+//  receive_buffer[1] = 'b';
+//  receive_buffer[2] = 'c';
+//  receive_index = 3;
+//  end_reception();
+
+
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	//Receiver Code
+	  //printf("Sanity Check");
+
+	  if(end_reception_flag == 1){
+		  end_reception();
+	  }
+	  if(change_lights_flag == 1){
+		  updateStateLights();
+	  }
+
+
+
 	  //printf("Captured Val: %i\tCurrent State: %i\tPin Value: %d\n", capture_val, CurrentState, pinValue);
 	  //HAL_Delay(1000);
-	  if(!transmitting) {
-//		  if(print_test_man[0] != 0) {
-//			  printf("Past transmitted values:\n");
-//			  for(int i = 0; i < print_test_index; i++) {
-//				  printf("%#08lX\n", print_test_man[i]);
-//			  }
+//	  if(!transmitting) {
+////		  if(print_test_man[0] != 0) {
+////			  printf("Past transmitted values:\n");
+////			  for(int i = 0; i < print_test_index; i++) {
+////				  printf("%#08lX\n", print_test_man[i]);
+////			  }
+////		  }
+//		  printf("Enter text to transmit: ");
+//		  //fgets(transmit_buffer, 255, stdin);
+//		  char temp_input[255];
+//		  //scanf("%[^\n]s", temp_input);
+//		  fgets(temp_input, 255, stdin);
+//		  strncpy(transmit_buffer, temp_input, 255);
+//		  //printf("Stuff transmitted: %s\n", transmit_buffer);
+//		  printf("Message sent\n");
+//		  for(int i = 0; i <= 255; i++) {
+//			  test_input[i] = 0;
 //		  }
-		  printf("Enter text to transmit: ");
-		  //fgets(transmit_buffer, 255, stdin);
-		  char temp_input[255];
-		  //scanf("%[^\n]s", temp_input);
-		  fgets(temp_input, 255, stdin);
-		  strncpy(transmit_buffer, temp_input, 255);
-		  //printf("Stuff transmitted: %s\n", transmit_buffer);
-		  printf("Message sent\n");
-		  for(int i = 0; i <= 255; i++) {
-			  test_input[i] = 0;
-		  }
-		  for(int i = 0; i <= 512; i++) {
-			  //print_test_man[i] = 0;
-			  //print_test_ind[i] = 0;
-		  }
-		  transmitting = true;
-		  //print_test_index = 0;
-		  //print_test_ind_index = 0;
-		  test_index = 0;
-		  test_index_2 = 0;
-		  manchester_buffer = 0;
-		  transmit_buffer_index = 0;
-		  end_of_transmission = false;
-		  manchester_buffer = getNextTransmissionChar(true);
-		  //print_test_man[print_test_index] = manchester_buffer;
-		  //print_test_index++;
-		  //test_input[0] = getNextTransmissionChar(true);
-		  manchester_bit_count += 16;
-		  uint16_t temp = getNextTransmissionChar(false);
-//		  while(!end_of_transmission) {
-//			  test_input[transmit_buffer_index] = getNextTransmissionChar(false);
+//		  for(int i = 0; i <= 512; i++) {
+//			  //print_test_man[i] = 0;
+//			  //print_test_ind[i] = 0;
 //		  }
-		  if(temp != 0) {
-			  manchester_buffer |= (temp<<16);
-			  manchester_bit_count += 16;
-			  //print_test_man[print_test_index] = manchester_buffer;
-			  //print_test_index++;
-		  } else {
-			  end_of_transmission = true;
-		  }
-//		  if((manchester_buffer & 0b1) == 0b1) {
-//				HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
+//		  transmitting = true;
+//		  //print_test_index = 0;
+//		  //print_test_ind_index = 0;
+//		  test_index = 0;
+//		  test_index_2 = 0;
+//		  manchester_buffer = 0;
+//		  transmit_buffer_index = 0;
+//		  end_of_transmission = false;
+//		  manchester_buffer = getNextTransmissionChar(true);
+//		  //print_test_man[print_test_index] = manchester_buffer;
+//		  //print_test_index++;
+//		  //test_input[0] = getNextTransmissionChar(true);
+//		  manchester_bit_count += 16;
+//		  uint16_t temp = getNextTransmissionChar(false);
+////		  while(!end_of_transmission) {
+////			  test_input[transmit_buffer_index] = getNextTransmissionChar(false);
+////		  }
+//		  if(temp != 0) {
+//			  manchester_buffer |= (temp<<16);
+//			  manchester_bit_count += 16;
+//			  //print_test_man[print_test_index] = manchester_buffer;
+//			  //print_test_index++;
 //		  } else {
-//				HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 0);
+//			  end_of_transmission = true;
 //		  }
-
-		  /*if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
-			manchester_buffer = manchester_buffer>>1;
-			manchester_bit_count--;
-			__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
-		  } else {
-			manchester_buffer = manchester_buffer>>2;
-			manchester_bit_count -= 2;
-			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
-		  }*/
-		  if(CurrentState == IDLE_STATE) {
-//			  HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, (manchester_buffer & 0b1));
-//			  print_test_ind[0] = (manchester_buffer & 0b1);
-//			  print_test_ind_index++;
-//			  test_input[test_index_2] |= ((manchester_buffer&0b1)<<(15-test_index));
-//			  test_index++;
-//			  //manchester_buffer = manchester_buffer>>1;
-//			  manchester_bit_count--;
-//			  print_test_man[print_test_index] = manchester_buffer;
-//			  print_test_index++;
-
-
-			  __HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
-			  __HAL_TIM_SET_COUNTER(&htim3, 0);
-			  HAL_TIM_Base_Start_IT(&htim3);
-		  }
-
-	  }
+////		  if((manchester_buffer & 0b1) == 0b1) {
+////				HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
+////		  } else {
+////				HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 0);
+////		  }
+//
+//		  /*if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
+//			manchester_buffer = manchester_buffer>>1;
+//			manchester_bit_count--;
+//			__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
+//		  } else {
+//			manchester_buffer = manchester_buffer>>2;
+//			manchester_bit_count -= 2;
+//			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
+//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
+//		  }*/
+//		  if(CurrentState == IDLE_STATE) {
+////			  HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, (manchester_buffer & 0b1));
+////			  print_test_ind[0] = (manchester_buffer & 0b1);
+////			  print_test_ind_index++;
+////			  test_input[test_index_2] |= ((manchester_buffer&0b1)<<(15-test_index));
+////			  test_index++;
+////			  //manchester_buffer = manchester_buffer>>1;
+////			  manchester_bit_count--;
+////			  print_test_man[print_test_index] = manchester_buffer;
+////			  print_test_index++;
+//
+//
+//			  __HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+//			  __HAL_TIM_SET_COUNTER(&htim3, 0);
+//			  HAL_TIM_Base_Start_IT(&htim3);
+//		  }
+//
+//	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -317,7 +363,34 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+
+//helper function for ending reception and printing buffered message
+void end_reception() {
+	end_reception_flag = 0;
+    if (receiving) {
+        receiving = false;
+        if (bit_count > 0) {
+            // Discard incomplete byte
+        }
+        if (receive_index > 0) {
+            printf("Received: ");
+            for (int i = 0; i < receive_index; i++) {
+                printf("%c", receive_buffer[i]);
+            }
+            printf("\n");
+        }
+        receive_index = 0;
+        bit_count = 0;
+        current_partial_byte = 0;
+        previous_pin_state = 1;
+    }
+    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+}
+
+
 void updateStateLights(){
+	change_lights_flag = 0;
 	if(CurrentState == 0){
 		//IDLE LED
 		//gpioa->odr |= (001<<IDLE_LED_Pin);
@@ -365,7 +438,9 @@ uint16_t getNextTransmissionChar(bool first) {
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	//BUSY!
 	if (htim->Instance == TIM2) { // Ensure it's TIM2
-	        capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+		if (CurrentState == BUSY_STATE && receiving){
+
+			capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 
 	        // Compute the next compare value with delay
 	        compare_val = (capture_val + delay_us) % TIMER_MAX;
@@ -378,7 +453,87 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 
 	        //Changes LED's for busy state
 	    	CurrentState = BUSY_STATE;
-	    	updateStateLights();
+	    	change_lights_flag = 1;
+	    	//updateStateLights();
+
+
+			//Receiver Code
+	    	delta = capture_val - previous_capture_val;
+	    	previous_capture_val = capture_val;
+	    	previous_pin_state = current_pin_state;
+			current_pin_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
+
+            uint8_t edge_direction = 0; // 0 = falling, 1 = rising
+//			if (current_pin_state != previous_pin_state) {
+				edge_direction = current_pin_state;
+//			} else {
+//				edge_direction = 2; // invalid because no edge
+//			}
+
+			//check for valid bit before continuing
+//			if(edge_direction == 2) {
+//				//error
+//				CurrentState = ERR_STATE;
+//				updateStateLights();
+//				end_reception();
+//				return;
+//			}
+
+			//check for edge timing in correct range
+			if((delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX) || delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX) {
+				//build current received byte
+				if(delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX){
+					current_partial_byte = (current_partial_byte << 1) | (previous_pin_state); // Repeat the previous bit
+				} else {
+					current_partial_byte = (current_partial_byte << 0b1) | edge_direction;
+				}
+				bit_count++;
+
+				//Once 8 bits put byte into buffer
+				if(bit_count == 8){
+					receive_buffer[receive_index] = current_partial_byte;
+					receive_index++;
+					current_partial_byte = 0;
+					bit_count = 0;
+
+					//check for buffer full
+					if(receive_index > 254) {
+						end_reception_flag = 1;
+						//end_reception();
+						//will probably break stuff now if this happens but we're not
+						// expecting that big of packets anyway
+					}
+
+				}
+			} else {
+					//timing was out of expected range
+					CurrentState = ERR_STATE;
+					change_lights_flag = 1;
+					//updateStateLights();
+					end_reception_flag = 1;
+					//end_reception();
+				
+				}
+		} else if(CurrentState == IDLE_STATE) {
+			//First edge (starting receiving)
+			 // Initial edge detection (start of reception)
+			 capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			 compare_val = (capture_val + delay_us) % TIMER_MAX;
+			 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, compare_val);
+			 HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_2);
+ 
+			 // Transition to BUSY_STATE and start reception
+			 CurrentState = BUSY_STATE;
+			 change_lights_flag = 1;
+			 //updateStateLights();
+			 //HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+			 receiving = true;
+			 receive_index = 0;
+			 current_partial_byte = 0;
+			 bit_count = 1;
+			 previous_capture_val = capture_val;
+			 previous_pin_state = 1;
+		}
 	}
 }
 
@@ -392,14 +547,20 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     	if(pinValue == 1){
     		//IDLE
     		CurrentState = IDLE_STATE;
-    		updateStateLights();
+    		change_lights_flag = 1;
+    		end_reception_flag = 1;
+    		//updateStateLights();
+			//end_reception();
     		if(transmitting) {
     			HAL_TIM_Base_Start_IT(&htim3);
     		}
     	} else {
     		//HAL_TIM_Base_Stop_IT(&htim3);
     		CurrentState = ERR_STATE;
-    		updateStateLights();
+    		change_lights_flag = 1;
+    		//updateStateLights();
+    		end_reception_flag = 1;
+    		//end_reception();
 
     		//transmitting = false;
     		//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
