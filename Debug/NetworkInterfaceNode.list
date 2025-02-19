@@ -27,25 +27,25 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000030  00000000  00000000  0000b1d8  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0000e570  00000000  00000000  0000b208  2**0
+ 12 .debug_info   0000e56c  00000000  00000000  0000b208  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 000021bf  00000000  00000000  00019778  2**0
+ 13 .debug_abbrev 000021da  00000000  00000000  00019774  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00000d08  00000000  00000000  0001b938  2**3
+ 14 .debug_aranges 00000d08  00000000  00000000  0001b950  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_rnglists 00000a2b  00000000  00000000  0001c640  2**0
+ 15 .debug_rnglists 00000a2b  00000000  00000000  0001c658  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  0001771e  00000000  00000000  0001d06b  2**0
+ 16 .debug_macro  0001771e  00000000  00000000  0001d083  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0000f3a9  00000000  00000000  00034789  2**0
+ 17 .debug_line   0000f39e  00000000  00000000  000347a1  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000904a2  00000000  00000000  00043b32  2**0
+ 18 .debug_str    000904a2  00000000  00000000  00043b3f  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  000d3fd4  2**0
+ 19 .comment      00000043  00000000  00000000  000d3fe1  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00004c80  00000000  00000000  000d4018  2**2
+ 20 .debug_frame  00004c80  00000000  00000000  000d4024  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 00000072  00000000  00000000  000d8c98  2**0
+ 21 .debug_line_str 00000072  00000000  00000000  000d8ca4  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -1505,9 +1505,9 @@ void MX_GPIO_Init(void)
  8001130:	40020400 	.word	0x40020400
 
 08001134 <__io_putchar>:
-//volatile uint16_t print_test_index = 0;
-//volatile uint8_t print_test_ind[512] = {0};
-//volatile uint16_t print_test_ind_index = 0;
+volatile bool end_of_transmission = false;
+
+volatile bool blue_debug_mode = false;
 
 PUTCHAR_PROTOTYPE
 {
@@ -1614,16 +1614,12 @@ int main(void)
   MX_TIM3_Init();
  80011c0:	f000 fd7c 	bl	8001cbc <MX_TIM3_Init>
   /* USER CODE BEGIN 2 */
-  //printf("Hello World!\n");
   CurrentState = IDLE_STATE;
  80011c4:	4b87      	ldr	r3, [pc, #540]	@ (80013e4 <main+0x250>)
  80011c6:	2200      	movs	r2, #0
  80011c8:	601a      	str	r2, [r3, #0]
   updateStateLights();
  80011ca:	f000 f98d 	bl	80014e8 <updateStateLights>
-  //RCC->APB2ENR |= RCC_APB2ENR_DBGMCUEN; //enable MCU debug module clock
-//  __HAL_DBGMCU_FREEZE_TIM2();
-//  __HAL_DBGMCU_FREEZE_TIM3();
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
  80011ce:	2100      	movs	r1, #0
  80011d0:	4885      	ldr	r0, [pc, #532]	@ (80013e8 <main+0x254>)
@@ -1641,11 +1637,7 @@ int main(void)
  80011e0:	b2db      	uxtb	r3, r3
  80011e2:	2b00      	cmp	r3, #0
  80011e4:	d0f7      	beq.n	80011d6 <main+0x42>
-//		  }
-//		  for(int i = 0; i <= 512; i++) {
-//			  //print_test_man[i] = 0;
-//			  //print_test_ind[i] = 0;
-//		  }
+		  char temp_input[255];
 		  if(blue_debug_mode) {
  80011e6:	4b82      	ldr	r3, [pc, #520]	@ (80013f0 <main+0x25c>)
  80011e8:	781b      	ldrb	r3, [r3, #0]
@@ -1670,12 +1662,10 @@ int main(void)
  800120c:	4619      	mov	r1, r3
  800120e:	487a      	ldr	r0, [pc, #488]	@ (80013f8 <main+0x264>)
  8001210:	f005 f8a6 	bl	8006360 <strncpy>
-			  //printf("Stuff transmitted: %s\n", transmit_buffer);
 			  printf("Message sent\n");
  8001214:	4879      	ldr	r0, [pc, #484]	@ (80013fc <main+0x268>)
  8001216:	f004 fe65 	bl	8005ee4 <puts>
 			  char hex_conversion[255];
-			  //uint8_t hex_as_int[255] = {0};
 			  uint16_t index = 0;
  800121a:	2300      	movs	r3, #0
  800121c:	f8a7 3206 	strh.w	r3, [r7, #518]	@ 0x206
@@ -1786,11 +1776,7 @@ int main(void)
  80012fc:	b2db      	uxtb	r3, r3
  80012fe:	2b0d      	cmp	r3, #13
  8001300:	d192      	bne.n	8001228 <main+0x94>
-//			  }
-//			  for(int i = 0; i < 255; i++) {
-//
-//
-//			  }
+			  }
 			  strncpy(transmit_buffer, hex_conversion, 255);
  8001302:	f507 7380 	add.w	r3, r7, #256	@ 0x100
  8001306:	22ff      	movs	r2, #255	@ 0xff
@@ -1821,7 +1807,6 @@ int main(void)
  8001336:	4619      	mov	r1, r3
  8001338:	482f      	ldr	r0, [pc, #188]	@ (80013f8 <main+0x264>)
  800133a:	f005 f811 	bl	8006360 <strncpy>
-			  //printf("Stuff transmitted: %s\n", transmit_buffer);
 			  printf("Message sent\n");
  800133e:	482f      	ldr	r0, [pc, #188]	@ (80013fc <main+0x268>)
  8001340:	f004 fdd0 	bl	8005ee4 <puts>
@@ -1830,10 +1815,6 @@ int main(void)
  8001344:	4b29      	ldr	r3, [pc, #164]	@ (80013ec <main+0x258>)
  8001346:	2201      	movs	r2, #1
  8001348:	701a      	strb	r2, [r3, #0]
-		  //print_test_index = 0;
-		  //print_test_ind_index = 0;
-//		  test_index = 0;
-//		  test_index_2 = 0;
 		  manchester_buffer = 0;
  800134a:	4b2e      	ldr	r3, [pc, #184]	@ (8001404 <main+0x270>)
  800134c:	2200      	movs	r2, #0
@@ -1853,9 +1834,6 @@ int main(void)
  8001364:	461a      	mov	r2, r3
  8001366:	4b27      	ldr	r3, [pc, #156]	@ (8001404 <main+0x270>)
  8001368:	601a      	str	r2, [r3, #0]
-		  //print_test_man[print_test_index] = manchester_buffer;
-		  //print_test_index++;
-		  //test_input[0] = getNextTransmissionChar(true);
 		  manchester_bit_count += 16;
  800136a:	4b29      	ldr	r3, [pc, #164]	@ (8001410 <main+0x27c>)
  800136c:	781b      	ldrb	r3, [r3, #0]
@@ -1869,9 +1847,6 @@ int main(void)
  800137a:	f000 f8f5 	bl	8001568 <getNextTransmissionChar>
  800137e:	4603      	mov	r3, r0
  8001380:	f8a7 3200 	strh.w	r3, [r7, #512]	@ 0x200
-//		  while(!end_of_transmission) {
-//			  test_input[transmit_buffer_index] = getNextTransmissionChar(false);
-//		  }
 		  if(temp != 0) {
  8001384:	f8b7 3200 	ldrh.w	r3, [r7, #512]	@ 0x200
  8001388:	2b00      	cmp	r3, #0
@@ -1893,28 +1868,17 @@ int main(void)
  80013a6:	4b1a      	ldr	r3, [pc, #104]	@ (8001410 <main+0x27c>)
  80013a8:	701a      	strb	r2, [r3, #0]
  80013aa:	e002      	b.n	80013b2 <main+0x21e>
-			  //print_test_man[print_test_index] = manchester_buffer;
-			  //print_test_index++;
 		  } else {
 			  end_of_transmission = true;
  80013ac:	4b17      	ldr	r3, [pc, #92]	@ (800140c <main+0x278>)
  80013ae:	2201      	movs	r2, #1
  80013b0:	701a      	strb	r2, [r3, #0]
-			manchester_buffer = manchester_buffer>>2;
-			manchester_bit_count -= 2;
-			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
-		  }*/
+		  }
 		  if(CurrentState == IDLE_STATE) {
  80013b2:	4b0c      	ldr	r3, [pc, #48]	@ (80013e4 <main+0x250>)
  80013b4:	681b      	ldr	r3, [r3, #0]
  80013b6:	2b00      	cmp	r3, #0
  80013b8:	f47f af0d 	bne.w	80011d6 <main+0x42>
-//			  manchester_bit_count--;
-//			  print_test_man[print_test_index] = manchester_buffer;
-//			  print_test_index++;
-
-
 			  __HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
  80013bc:	4b15      	ldr	r3, [pc, #84]	@ (8001414 <main+0x280>)
  80013be:	681b      	ldr	r3, [r3, #0]
@@ -2487,11 +2451,11 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     			HAL_TIM_Base_Start_IT(&htim3);
  800178a:	4808      	ldr	r0, [pc, #32]	@ (80017ac <HAL_TIM_OC_DelayElapsedCallback+0x70>)
  800178c:	f001 fc30 	bl	8002ff0 <HAL_TIM_Base_Start_IT>
+    		updateStateLights();
     		transmitting = false;
-    		//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
     	}
 
-    }*/
+    }
 }
  8001790:	e007      	b.n	80017a2 <HAL_TIM_OC_DelayElapsedCallback+0x66>
     		CurrentState = ERR_STATE;
@@ -2525,17 +2489,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
  80017c4:	af00      	add	r7, sp, #0
  80017c6:	6078      	str	r0, [r7, #4]
   /* Prevent unused argument(s) compilation warning */
-	if (htim->Instance == TIM3/* && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4*/) {
+	if (htim->Instance == TIM3) {
  80017c8:	687b      	ldr	r3, [r7, #4]
  80017ca:	681b      	ldr	r3, [r3, #0]
  80017cc:	4a37      	ldr	r2, [pc, #220]	@ (80018ac <HAL_TIM_PeriodElapsedCallback+0xec>)
  80017ce:	4293      	cmp	r3, r2
  80017d0:	d167      	bne.n	80018a2 <HAL_TIM_PeriodElapsedCallback+0xe2>
-//    	if((manchester_buffer & 0b1) == 0b1) {
-//			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
-//		} else {
-//			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 0);
-//		}
 		 if(manchester_bit_count == 0) {
  80017d2:	4b37      	ldr	r3, [pc, #220]	@ (80018b0 <HAL_TIM_PeriodElapsedCallback+0xf0>)
  80017d4:	781b      	ldrb	r3, [r3, #0]
@@ -2680,8 +2639,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
  80018d4:	f5b3 5f00 	cmp.w	r3, #8192	@ 0x2000
  80018d8:	d10f      	bne.n	80018fa <HAL_GPIO_EXTI_Callback+0x32>
 		//enable busy LED & OFF IDLE
-//		HAL_GPIO_TogglePin(IDLE_LED_GPIO_Port, IDLE_LED_Pin);
-//		HAL_GPIO_TogglePin(BUSY_LED_GPIO_Port, BUSY_LED_Pin);
 		blue_debug_mode = !blue_debug_mode;
  80018da:	4b0b      	ldr	r3, [pc, #44]	@ (8001908 <HAL_GPIO_EXTI_Callback+0x40>)
  80018dc:	781b      	ldrb	r3, [r3, #0]
