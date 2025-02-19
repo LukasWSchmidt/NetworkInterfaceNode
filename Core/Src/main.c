@@ -122,10 +122,12 @@ volatile char receive_buffer[256];
 volatile uint8_t receive_index = 0;
 volatile bool receiving = false;
 volatile uint32_t current_pin_state = 1;
-volatile uint32_t previous_pin_state = 1; // idle is high
+//volatile uint32_t previous_pin_state = 1; // idle is high
 uint8_t change_lights_flag = 0; //1 when lights need changing
-uint8_t end_reception_flag = 0;
-volatile uint32_t delta = 0;
+volatile bool end_reception_flag = false;;
+
+volatile bool middle_bit = true;
+//volatile uint32_t delta = 0;
 
 //volatile uint32_t print_test_man[512] = {0};
 //volatile uint16_t print_test_index = 0;
@@ -215,8 +217,29 @@ int main(void)
 	//Receiver Code
 	  //printf("Sanity Check");
 
-	  if(end_reception_flag == 1){
-		  end_reception();
+	  if(end_reception_flag){
+		  //end_reception();
+		  end_reception_flag = false;
+		  //if (receiving) {
+			 // receiving = false;
+//			  if (bit_count > 0) {
+//				  // Discard incomplete byte
+//			  }
+		  if (receive_index > 0) {
+			  printf("Received: %s\n", receive_buffer);
+//				  for (int i = 0; i < receive_index; i++) {
+//					  printf("%c", receive_buffer[i]);
+//				  }
+//				  printf("\n");
+		  }
+		  receive_index = 0;
+//		  bit_count = 0;
+//		  current_partial_byte = 0;
+//  //        previous_pin_state = 1;
+//		  middle_bit = true;
+		 // }
+//		  __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+//		  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 	  }
 	  if(change_lights_flag == 1){
 		  updateStateLights();
@@ -382,7 +405,8 @@ void end_reception() {
         receive_index = 0;
         bit_count = 0;
         current_partial_byte = 0;
-        previous_pin_state = 1;
+//        previous_pin_state = 1;
+        middle_bit = true;
     }
     __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
     HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
@@ -458,14 +482,14 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 
 
 			//Receiver Code
-	    	delta = capture_val - previous_capture_val;
+	    	uint32_t delta = capture_val - previous_capture_val;
 	    	previous_capture_val = capture_val;
-	    	previous_pin_state = current_pin_state;
+	    	//uint32_t previous_pin_state = current_pin_state;
 			current_pin_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 
-            uint8_t edge_direction = 0; // 0 = falling, 1 = rising
+            //uint8_t edge_direction = 0; // 0 = falling, 1 = rising
 //			if (current_pin_state != previous_pin_state) {
-				edge_direction = current_pin_state;
+				//edge_direction = current_pin_state;
 //			} else {
 //				edge_direction = 2; // invalid because no edge
 //			}
@@ -480,12 +504,16 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 //			}
 
 			//check for edge timing in correct range
-			if((delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX) || delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX) {
+			if((delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX) || (delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX)) {
 				//build current received byte
-				if(delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX){
-					current_partial_byte = (current_partial_byte << 1) | (previous_pin_state); // Repeat the previous bit
+				if(delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX){
+					if(middle_bit) {
+						current_partial_byte = (current_partial_byte << 1) | current_pin_state; // Repeat the previous bit
+					}
+					middle_bit = !middle_bit;
 				} else {
-					current_partial_byte = (current_partial_byte << 0b1) | edge_direction;
+					current_partial_byte = (current_partial_byte << 1) | current_pin_state;
+					middle_bit = false;
 				}
 				bit_count++;
 
@@ -498,10 +526,28 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 
 					//check for buffer full
 					if(receive_index > 254) {
-						end_reception_flag = 1;
+						end_reception_flag = true;
+						receiving = false;
+		//			    if (bit_count > 0) {
+		//				    // Discard incomplete byte
+		//			    }
+//					    if (receive_index > 0) {
+//						    printf("Received: %s\n", receive_buffer);
+//		//				    for (int i = 0; i < receive_index; i++) {
+//		//					    printf("%c", receive_buffer[i]);
+//		//				    }
+//		//				    printf("\n");
+//					    }
+					    //receive_index = 0;
+					    bit_count = 0;
+					    current_partial_byte = 0;
+			  //        previous_pin_state = 1;
+					    middle_bit = true;
 						//end_reception();
 						//will probably break stuff now if this happens but we're not
 						// expecting that big of packets anyway
+					    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+					    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 					}
 
 				}
@@ -510,8 +556,30 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 					CurrentState = ERR_STATE;
 					change_lights_flag = 1;
 					//updateStateLights();
-					end_reception_flag = 1;
+					//end_reception_flag = 1;
 					//end_reception();
+					end_reception_flag = true;
+					receiving = false;
+	//			    if (bit_count > 0) {
+	//				    // Discard incomplete byte
+	//			    }
+//					    if (receive_index > 0) {
+//						    printf("Received: %s\n", receive_buffer);
+//		//				    for (int i = 0; i < receive_index; i++) {
+//		//					    printf("%c", receive_buffer[i]);
+//		//				    }
+//		//				    printf("\n");
+//					    }
+					//receive_index = 0;
+					bit_count = 0;
+					current_partial_byte = 0;
+		  //        previous_pin_state = 1;
+					middle_bit = true;
+					//end_reception();
+					//will probably break stuff now if this happens but we're not
+					// expecting that big of packets anyway
+					__HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+					HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 				
 				}
 		} else if(CurrentState == IDLE_STATE) {
@@ -532,7 +600,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 			 current_partial_byte = 0;
 			 bit_count = 1;
 			 previous_capture_val = capture_val;
-			 previous_pin_state = 1;
+//			 previous_pin_state = 1;
+			 middle_bit = true;
 		}
 	}
 }
