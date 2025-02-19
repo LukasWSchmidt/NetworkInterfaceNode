@@ -228,7 +228,14 @@ int main(void)
 					  hex2 = charToBinary(transmit_buffer[index]);
 					  index++;
 				  }
-				  hex_conversion[conversion_index] |=
+				  if(hex1 >= 16) {
+					  hex1 = 0;
+				  }
+				  if(hex2 >= 16) {
+					  hex2 = 0;
+				  }
+				  hex_conversion[conversion_index] = (hex1<<4)|(hex2);
+				  conversion_index++;
 			  }
 //			  for(int i = 0; i < 255; i++) {
 //				  hex_as_int[i] = charToBinary(transmit_buffer[i]);
