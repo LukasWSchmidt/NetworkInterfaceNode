@@ -134,6 +134,8 @@ volatile bool middle_bit = true;
 //volatile uint8_t print_test_ind[512] = {0};
 //volatile uint16_t print_test_ind_index = 0;
 
+//volatile uint8_t second_reception_test = 0;
+
 PUTCHAR_PROTOTYPE
 {
  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
@@ -149,6 +151,7 @@ GETCHAR_PROTOTYPE
 
 void updateStateLights();
 uint16_t getNextTransmissionChar(bool first);
+void end_reception();
 
 /* USER CODE END 0 */
 
@@ -218,22 +221,22 @@ int main(void)
 	  //printf("Sanity Check");
 
 	  if(end_reception_flag){
-		  //end_reception();
-		  end_reception_flag = false;
-		  //if (receiving) {
-			 // receiving = false;
-//			  if (bit_count > 0) {
-//				  // Discard incomplete byte
+		  end_reception();
+		  //end_reception_flag = false;
+//		  //if (receiving) {
+//			 // receiving = false;
+////			  if (bit_count > 0) {
+////				  // Discard incomplete byte
+////			  }
+//		  if (receive_index > 0) {
+//			  printf("Received: %s\n", receive_buffer);
+//			  for (int i = 0; i < receive_index; i++) {
+//				  receive_buffer[i] = 0;
 //			  }
-		  if (receive_index > 0) {
-			  printf("Received: %s\n", receive_buffer);
-			  for (int i = 0; i < receive_index; i++) {
-				  receive_buffer[i] = 0;
-			  }
-//				  printf("\n");
-
-		  }
-		  receive_index = 0;
+////				  printf("\n");
+//
+//		  }
+//		  receive_index = 0;
 //		  bit_count = 0;
 //		  current_partial_byte = 0;
 //  //        previous_pin_state = 1;
@@ -389,8 +392,11 @@ void SystemClock_Config(void)
 
 
 //helper function for ending reception and printing buffered message
-//void end_reception() {
-//	end_reception_flag = 0;
+void end_reception() {
+	end_reception_flag = false;
+//	if(second_reception_test >= 1) {
+//		second_reception_test = 0;
+//	}
 //    if (receiving) {
 //        receiving = false;
 //        if (bit_count > 0) {
@@ -409,9 +415,30 @@ void SystemClock_Config(void)
 ////        previous_pin_state = 1;
 //        middle_bit = true;
 //    }
-//    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
-//    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-//}
+    //if (receiving) {
+	  receiving = false;
+//			  if (bit_count > 0) {
+//				  // Discard incomplete byte
+//			  }
+	  if (receive_index > 0) {
+		  printf("Received: %s\n", receive_buffer);
+		  for (int i = 0; i < receive_index; i++) {
+			  receive_buffer[i] = 0;
+		  }
+	  //printf("\n");
+
+	  }
+	  receive_index = 0;
+	  bit_count = 0;
+	  current_partial_byte = 0;
+//        previous_pin_state = 1;
+	  middle_bit = true;
+
+	  //second_reception_test++;
+//	__HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+//	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+    //}
+}
 
 
 void updateStateLights(){
@@ -465,6 +492,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	if (htim->Instance == TIM2) { // Ensure it's TIM2
 		if (CurrentState == BUSY_STATE && receiving){
 
+
 			capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 
 	        // Compute the next compare value with delay
@@ -476,6 +504,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	        // Start Output Compare interrupt
 	        HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_2);
 
+	        current_pin_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 	        //Changes LED's for busy state
 	    	CurrentState = BUSY_STATE;
 	    	change_lights_flag = 1;
@@ -486,7 +515,6 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	    	uint32_t delta = capture_val - previous_capture_val;
 	    	previous_capture_val = capture_val;
 	    	//uint32_t previous_pin_state = current_pin_state;
-			current_pin_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 
             //uint8_t edge_direction = 0; // 0 = falling, 1 = rising
 //			if (current_pin_state != previous_pin_state) {
@@ -510,13 +538,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 				if(delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX){
 					if(middle_bit) {
 						current_partial_byte = (current_partial_byte << 1) | current_pin_state; // Repeat the previous bit
+						bit_count++;
 					}
 					middle_bit = !middle_bit;
 				} else {
 					current_partial_byte = (current_partial_byte << 1) | current_pin_state;
 					middle_bit = false;
+					bit_count++;
 				}
-				bit_count++;
+				//bit_count++;
 
 				//Once 8 bits put byte into buffer
 				if(bit_count >= 8){
@@ -528,7 +558,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 					//check for buffer full
 					if(receive_index > 254) {
 						end_reception_flag = true;
-						receiving = false;
+						//receiving = false;
 		//			    if (bit_count > 0) {
 		//				    // Discard incomplete byte
 		//			    }
@@ -540,15 +570,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 //		//				    printf("\n");
 //					    }
 					    //receive_index = 0;
-					    bit_count = 0;
-					    current_partial_byte = 0;
-			  //        previous_pin_state = 1;
-					    middle_bit = true;
-						//end_reception();
-						//will probably break stuff now if this happens but we're not
-						// expecting that big of packets anyway
-					    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
-					    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+//					    bit_count = 0;
+//					    current_partial_byte = 0;
+//			  //        previous_pin_state = 1;
+//					    middle_bit = true;
+//						//end_reception();
+//						//will probably break stuff now if this happens but we're not
+//						// expecting that big of packets anyway
+//					    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+//					    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 					}
 
 				}
@@ -560,7 +590,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 					//end_reception_flag = 1;
 					//end_reception();
 					end_reception_flag = true;
-					receiving = false;
+					//receiving = false;
 	//			    if (bit_count > 0) {
 	//				    // Discard incomplete byte
 	//			    }
@@ -572,15 +602,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 //		//				    printf("\n");
 //					    }
 					//receive_index = 0;
-					bit_count = 0;
-					current_partial_byte = 0;
-		  //        previous_pin_state = 1;
-					middle_bit = true;
-					//end_reception();
-					//will probably break stuff now if this happens but we're not
-					// expecting that big of packets anyway
-					__HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
-					HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+//					bit_count = 0;
+//					current_partial_byte = 0;
+//		  //        previous_pin_state = 1;
+//					middle_bit = true;
+//					//end_reception();
+//					//will probably break stuff now if this happens but we're not
+//					// expecting that big of packets anyway
+//					__HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_ICPOLARITY_FALLING);
+//					HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 				
 				}
 		} else if(CurrentState == IDLE_STATE) {
@@ -618,18 +648,22 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		//IDLE
     		CurrentState = IDLE_STATE;
     		change_lights_flag = 1;
-    		end_reception_flag = 1;
+    		if(receiving) {
+    			end_reception_flag = true;
+    		}
     		//updateStateLights();
 			//end_reception();
-    		if(transmitting) {
-    			HAL_TIM_Base_Start_IT(&htim3);
-    		}
+//    		if(transmitting) {
+//    			HAL_TIM_Base_Start_IT(&htim3);
+//    		}
     	} else {
     		//HAL_TIM_Base_Stop_IT(&htim3);
     		CurrentState = ERR_STATE;
     		change_lights_flag = 1;
     		//updateStateLights();
-    		end_reception_flag = 1;
+    		if(receiving) {
+    			end_reception_flag = true;
+    		}
     		//end_reception();
 
     		//transmitting = false;
@@ -676,72 +710,72 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* Prevent unused argument(s) compilation warning */
-	if (htim->Instance == TIM3/* && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4*/) {
-//    	if((manchester_buffer & 0b1) == 0b1) {
+//	if (htim->Instance == TIM3/* && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4*/) {
+////    	if((manchester_buffer & 0b1) == 0b1) {
+////			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
+////		} else {
+////			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 0);
+////		}
+//		 if(manchester_bit_count == 0) {
+//			HAL_TIM_Base_Stop_IT(&htim3);
+//			transmitting = false;
 //			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
+//			//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
 //		} else {
-//			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 0);
+//
+//
+//
+//
+//			//print_test_ind[print_test_ind_index] = (manchester_buffer & 0b1);
+//			//print_test_ind_index++;
+//			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, (manchester_buffer & 0b1));
+//			manchester_buffer = manchester_buffer>>1;
+//			manchester_bit_count--;
+//			//print_test_man[print_test_index] = manchester_buffer;
+//			//print_test_index++;
+//			if(test_index > 15) {
+//				test_index = 0;
+//				test_index_2++;
+//			}
+//			test_input[test_index_2] |= ((manchester_buffer&0b1)<<(15-test_index));
+//			test_index++;
+//
+//	//		if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
+//	//			manchester_buffer = manchester_buffer>>1;
+//	//			manchester_bit_count--;
+//	//			__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+//	//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
+//	//		} else {
+//	//			manchester_buffer = manchester_buffer>>2;
+//	//			manchester_bit_count -= 2;
+//	//			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
+//	//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
+//	//		}
+//			//HAL_GPIO_TogglePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin);
+//			if(!end_of_transmission && (manchester_bit_count <= 16)) {
+//				uint16_t reverse_manchester = getNextTransmissionChar(false);
+//				//manchester_bit_count += 16;
+//				if(manchester_bit_count == 16) {
+//					manchester_buffer &= MASK_16_BITS;
+//					//print_test_man[print_test_index] = manchester_buffer;
+//					//print_test_index++;
+//				} else {
+//					manchester_buffer &= MASK_17_BITS;
+//					//print_test_man[print_test_index] = manchester_buffer;
+//					//print_test_index++;
+//				}
+//				if(reverse_manchester == 0) {
+//					end_of_transmission = true;
+//				} else {
+//					manchester_bit_count += 16;
+//					manchester_buffer |= (reverse_manchester<<(manchester_bit_count-16));
+//					//print_test_man[print_test_index] = manchester_buffer;
+//					//print_test_index++;
+//				}
+//			}
+//
 //		}
-		 if(manchester_bit_count == 0) {
-			HAL_TIM_Base_Stop_IT(&htim3);
-			transmitting = false;
-			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
-			//HAL_TIM_OC_Stop(&htim3, TIM_CHANNEL_4);
-		} else {
-
-
-
-
-			//print_test_ind[print_test_ind_index] = (manchester_buffer & 0b1);
-			//print_test_ind_index++;
-			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, (manchester_buffer & 0b1));
-			manchester_buffer = manchester_buffer>>1;
-			manchester_bit_count--;
-			//print_test_man[print_test_index] = manchester_buffer;
-			//print_test_index++;
-			if(test_index > 15) {
-				test_index = 0;
-				test_index_2++;
-			}
-			test_input[test_index_2] |= ((manchester_buffer&0b1)<<(15-test_index));
-			test_index++;
-
-	//		if((manchester_buffer & 0b1) != ((manchester_buffer>>1) & 0b1)) {
-	//			manchester_buffer = manchester_buffer>>1;
-	//			manchester_bit_count--;
-	//			__HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
-	//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, HALF_PERIOD);
-	//		} else {
-	//			manchester_buffer = manchester_buffer>>2;
-	//			manchester_bit_count -= 2;
-	//			__HAL_TIM_SET_AUTORELOAD(&htim3, FULL_PERIOD);
-	//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, FULL_PERIOD);
-	//		}
-			//HAL_GPIO_TogglePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin);
-			if(!end_of_transmission && (manchester_bit_count <= 16)) {
-				uint16_t reverse_manchester = getNextTransmissionChar(false);
-				//manchester_bit_count += 16;
-				if(manchester_bit_count == 16) {
-					manchester_buffer &= MASK_16_BITS;
-					//print_test_man[print_test_index] = manchester_buffer;
-					//print_test_index++;
-				} else {
-					manchester_buffer &= MASK_17_BITS;
-					//print_test_man[print_test_index] = manchester_buffer;
-					//print_test_index++;
-				}
-				if(reverse_manchester == 0) {
-					end_of_transmission = true;
-				} else {
-					manchester_bit_count += 16;
-					manchester_buffer |= (reverse_manchester<<(manchester_bit_count-16));
-					//print_test_man[print_test_index] = manchester_buffer;
-					//print_test_index++;
-				}
-			}
-
-		}
-	}
+//	}
 }
 
 //void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
