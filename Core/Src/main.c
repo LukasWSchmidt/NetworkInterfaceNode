@@ -400,7 +400,7 @@ void SystemClock_Config(void)
 void end_reception() {
 	end_reception_flag = false;
 	receiving = false;
-	if (receive_index > 0) {
+	if ((receive_index > 0) && (CurrentState == 0)) {
 		printf("Received: %s\n", receive_buffer);
 		for (int i = 0; i < receive_index; i++) {
 			receive_buffer[i] = 0;
