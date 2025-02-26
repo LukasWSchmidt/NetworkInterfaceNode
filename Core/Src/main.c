@@ -529,17 +529,23 @@ void console_input(char* input) {
 	printf(input);
 	if(input[0] == 'r') {
 		if(!receive_printed) {
-			if((receive_buffer[2] == SENDER_ADDR1) || (receive_buffer[2] == SENDER_ADDR2) || (receive_buffer[2] == SENDER_ADDR3) || (receive_buffer[2] == SENDER_ADDR4)) {
-				printf("--> Last received message (from node %d): %s\n", receive_buffer[1], receive_buffer+5);
-				for (int i = 0; i < 260; i++) {
-					receive_buffer[i] = 0;
+			if(receive_buffer[0] == 'U') {
+				if((receive_buffer[2] == SENDER_ADDR1) || (receive_buffer[2] == SENDER_ADDR2) || (receive_buffer[2] == SENDER_ADDR3) || (receive_buffer[2] == SENDER_ADDR4)) {
+					printf("--> Last received message (from node %d): %s\n", receive_buffer[1], receive_buffer+5);
+					for (int i = 0; i < 260; i++) {
+						receive_buffer[i] = 0;
+					}
+				} else if(receive_buffer[2] == 0xFF) {
+					printf("--> Last received message (broadcast): %s\n", receive_buffer+5);
+					for (int i = 0; i < 260; i++) {
+						receive_buffer[i] = 0;
+					}
+				} else {
+					printf("--> No messages at this time\n");
+
 				}
-			} else if(receive_buffer[2] == 0xFF) {
-				printf("--> Last received message (broadcast): %s\n", receive_buffer+5);
-				for (int i = 0; i < 260; i++) {
-					receive_buffer[i] = 0;
-				}
-			} else {
+			}
+			else {
 				printf("--> No messages at this time\n");
 			}
 		} else {
@@ -749,15 +755,13 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 			 // Transition to BUSY_STATE and start reception
 			 CurrentState = BUSY_STATE;
 			 change_lights_flag = 1;
-			 if(!receiving) {
-				 receiving = true;
-				 end_reception_flag = false;
-				 receive_index = 0;
-				 current_partial_byte = 0;
-				 bit_count = 1;
-				 previous_capture_val = capture_val;
-				 middle_bit = true;
-			 }
+			 receiving = true;
+			 end_reception_flag = false;
+			 receive_index = 0;
+			 current_partial_byte = 0;
+			 bit_count = 1;
+			 previous_capture_val = capture_val;
+			 middle_bit = true;
 		}
 	}
 }
