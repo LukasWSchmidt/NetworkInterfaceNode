@@ -60,8 +60,8 @@ all: main-build
 main-build: NetworkInterfaceNode.elf secondary-outputs
 
 # Tool invocations
-NetworkInterfaceNode.elf NetworkInterfaceNode.map: $(OBJS) $(USER_OBJS) C:\Users\errigok\STM32CubeIDE\workspace_1.16.0\NetworkInterfaceNode\STM32F411RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "NetworkInterfaceNode.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\errigok\STM32CubeIDE\workspace_1.16.0\NetworkInterfaceNode\STM32F411RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="NetworkInterfaceNode.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
+NetworkInterfaceNode.elf NetworkInterfaceNode.map: $(OBJS) $(USER_OBJS) C:\Users\schmidtlw\OneDrive\ -\ Milwaukee\ School\ of\ Engineering\Documents\Networking\NetworkInterfaceNode\STM32F411RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "NetworkInterfaceNode.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\schmidtlw\OneDrive - Milwaukee School of Engineering\Documents\Networking\NetworkInterfaceNode\STM32F411RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="NetworkInterfaceNode.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
