@@ -131,7 +131,7 @@ volatile uint8_t receive_index = 0;
 volatile bool receiving = false;
 volatile uint32_t current_pin_state = 1;
 volatile uint8_t change_lights_flag = 0; //1 when lights need changing
-//volatile bool end_reception_flag = false;
+volatile bool end_reception_flag = false;
 uint16_t backoff_counter = 0;
 bool backoff_delay = false;
 bool receive_printed = false;
@@ -671,70 +671,73 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	    	CurrentState = BUSY_STATE;
 	    	change_lights_flag = 1;
 
+	    	if(!end_reception_flag) {
 			//Receiver Code
-	    	uint32_t delta = capture_val - previous_capture_val;
-	    	previous_capture_val = capture_val;
+				uint32_t delta = capture_val - previous_capture_val;
+				previous_capture_val = capture_val;
+
 
 			//check for edge timing in correct range
-			if((delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX) || (delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX)) {
-				//build current received byte
-				if(delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX){
-					if(middle_bit) {
-						current_partial_byte = (current_partial_byte << 1) | current_pin_state; // Repeat the previous bit
+				if((delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX) || (delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX)) {
+					//build current received byte
+					if(delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX){
+						if(middle_bit) {
+							current_partial_byte = (current_partial_byte << 1) | current_pin_state; // Repeat the previous bit
+							bit_count++;
+						}
+						middle_bit = !middle_bit;
+					} else {
+						current_partial_byte = (current_partial_byte << 1) | current_pin_state;
+						middle_bit = false;
 						bit_count++;
 					}
-					middle_bit = !middle_bit;
+
+					//Once 8 bits put byte into buffer
+					if(bit_count >= 8){
+						receive_buffer[receive_index] = current_partial_byte;
+						receive_index++;
+						current_partial_byte = 0;
+						bit_count = 0;
+
+						//check for buffer full
+						if(receive_index > 260) {
+							end_reception_flag = true;
+							end_reception();
+						}
+
+						//check byte for message detail
+						//byte 0 is preamble (ignore, just helpful for collision detection)
+						//byte 1 is sender address
+						//byte 2 is destination address (check if broadcast or for this node)
+						if(receive_index == 3) {
+							receive_addr = receive_buffer[2];
+							if((receive_addr != SENDER_ADDR1) && (receive_addr != SENDER_ADDR2) && (receive_addr != SENDER_ADDR3) && (receive_addr != SENDER_ADDR4) && (receive_addr != 0xFF)) { //not this node or not broadcast
+								//not for this node
+								end_reception_flag = true;
+								end_reception();
+								CurrentState = IDLE_STATE;
+								change_lights_flag = 1;
+								//clear buffer
+	//							for (int i = 0; i < receive_index; i++) {
+	//								receive_buffer[i] = 0;
+	//							}
+							}
+						}
+						//Ignore CRC for now
+
+
+
+					}
 				} else {
-					current_partial_byte = (current_partial_byte << 1) | current_pin_state;
-					middle_bit = false;
-					bit_count++;
-				}
-
-				//Once 8 bits put byte into buffer
-				if(bit_count >= 8){
-					receive_buffer[receive_index] = current_partial_byte;
-					receive_index++;
-					current_partial_byte = 0;
-					bit_count = 0;
-
-					//check for buffer full
-					if(receive_index > 260) {
-						//end_reception_flag = true;
+					//timing was out of expected range
+					CurrentState = ERR_STATE;
+					change_lights_flag = 1;
+					if(receiving) {
+						end_reception_flag = true;
 						end_reception();
 					}
-
-					//check byte for message detail
-					//byte 0 is preamble (ignore, just helpful for collision detection)
-					//byte 1 is sender address
-					//byte 2 is destination address (check if broadcast or for this node)
-					if(receive_index == 3) {
-						receive_addr = receive_buffer[2];
-						if((receive_addr != SENDER_ADDR1) && (receive_addr != SENDER_ADDR2) && (receive_addr != SENDER_ADDR3) && (receive_addr != SENDER_ADDR4) && (receive_addr != 0xFF)) { //not this node or not broadcast
-							//not for this node
-							//end_reception_flag = true;
-							end_reception();
-							CurrentState = IDLE_STATE;
-							change_lights_flag = 1;
-							//clear buffer
-//							for (int i = 0; i < receive_index; i++) {
-//								receive_buffer[i] = 0;
-//							}
-						}
-					}
-					//Ignore CRC for now
-
-
-
 				}
-			} else {
-				//timing was out of expected range
-				CurrentState = ERR_STATE;
-				change_lights_flag = 1;
-				if(receiving) {
-					//end_reception_flag = true;
-					end_reception();
-				}
-			}
+	    	}
 		} else if(CurrentState == IDLE_STATE) {
 			//First edge (starting receiving)
 			 // Initial edge detection (start of reception)
@@ -747,6 +750,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 			 CurrentState = BUSY_STATE;
 			 change_lights_flag = 1;
 			 receiving = true;
+			 end_reception_flag = false;
 			 receive_index = 0;
 			 current_partial_byte = 0;
 			 bit_count = 1;
@@ -770,7 +774,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		change_lights_flag = 1;
     		updateStateLights();
     		if(receiving) {
-    			//end_reception_flag = true;
+    			end_reception_flag = true;
     			end_reception();
     		}
    			if(transmitting) {
@@ -783,7 +787,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
 			//backoff_counter++;
 			backoff_delay = true;
     		if(receiving) {
-    			//end_reception_flag = true;
+    			end_reception_flag = true;
     			end_reception();
     		}
     		transmitting = false;
