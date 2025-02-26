@@ -306,7 +306,7 @@ int main(void)
 				  transmit_buffer[2] = destination_addr;
 
 				  // Length of message
-				  uint8_t length = strlen(space_ptr + 1); // Skips past the space
+				  uint8_t length = strlen(space_ptr); // ignore new line
 				  transmit_buffer[3] = length;
 				  transmit_buffer[4] = BLANK_CRC;
 
