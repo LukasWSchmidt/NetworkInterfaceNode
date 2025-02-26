@@ -300,6 +300,7 @@ int main(void)
 				  // Convert the destination address to binary (takes entire byte not just first bit)
 				  destination_addr = (uint8_t)strtol(dest_addr_str, NULL, 16);
 
+				  //helo
 				  // Add preamble + source addr
 				  transmit_buffer[0] = PREAMBLE;
 				  transmit_buffer[1] = SENDER_ADDR;
