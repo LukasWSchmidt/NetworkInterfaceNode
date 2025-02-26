@@ -221,12 +221,13 @@ int main(void)
 
 	  //backoff code
 	  if(backoff_delay) {
-		  if(backoff_counter <= 10) {
+		  if(backoff_counter < 10) {
 			//delay random time between 0 and 1000ms
 			HAL_Delay((rand() % 1000));
 			//attempt to transmit again
 			printf("\n--> Message failed to send. Retrying, attempt %d\n", backoff_counter);
 			begin_transmission();
+			backoff_counter++;
 //			transmitting = true;
 //			manchester_buffer = 0;
 //		  	transmit_buffer_index = 0;
@@ -779,7 +780,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		CurrentState = ERR_STATE;
     		change_lights_flag = 1;
 			//Random backoff on collision
-			backoff_counter++;
+			//backoff_counter++;
 			backoff_delay = true;
     		if(receiving) {
     			//end_reception_flag = true;
