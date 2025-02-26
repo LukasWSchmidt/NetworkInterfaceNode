@@ -141,6 +141,7 @@ volatile bool middle_bit = true;
 
 volatile bool console_up = true;
 
+
 PUTCHAR_PROTOTYPE
 {
  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
@@ -217,15 +218,14 @@ int main(void)
 //	  if(end_reception_flag){
 //		  end_reception();
 //	  }
-	  if(change_lights_flag == 1){
-		  updateStateLights();
-	  }
+
 	  //backoff code
 	  if(backoff_delay) {
 		  if(backoff_counter <= 10) {
 			//delay random time between 0 and 1000ms
 			HAL_Delay((rand() % 1000));
 			//attempt to transmit again
+			printf("\n--> Message failed to send. Retrying, attempt %d\n", backoff_counter);
 			begin_transmission();
 //			transmitting = true;
 //			manchester_buffer = 0;
@@ -250,7 +250,7 @@ int main(void)
 			backoff_delay = false;
 			backoff_counter = 0;
 			//print failed to transmit message
-			printf("--> Failed to transmit message after 10 attempts\n");
+			printf("\n--> Failed to transmit message after 10 attempts\n");
 			transmitting = false;
 			console_up = true;
 			//return to idle state
@@ -261,14 +261,18 @@ int main(void)
 	  }
 
 
-	  if(end_of_transmission) {
+	  if(end_of_transmission && !transmitting) {
 		  end_of_transmission = false;
+		  console_up = true;
 		  printf("--> Message sent\n");
 	  }
-
+	  if(change_lights_flag == 1){
+		  updateStateLights();
+	  }
 	  if(console_up) {
 		  printf("CMD> ");
 		  char temp_input[263];
+		  //updateStateLights();
 		  fgets(temp_input, 262, stdin);
 		  console_input(temp_input);
 	  }
@@ -432,6 +436,9 @@ void end_reception() {
 //			receive_buffer[i] = 0;
 //		}
 //	}
+	if(receive_index < 259) {
+		receive_buffer[receive_index] = '\0';
+	}
 	receive_index = 0;
 	bit_count = 0;
 	current_partial_byte = 0;
@@ -518,12 +525,19 @@ void begin_transmission() {
 }
 
 void console_input(char* input) {
+	printf(input);
 	if(input[0] == 'r') {
 		if(!receive_printed) {
-			if((receive_addr == SENDER_ADDR1) || (receive_addr == SENDER_ADDR2) || (receive_addr == SENDER_ADDR3) || (receive_addr == SENDER_ADDR4)) {
-				printf("--> Received message from node %d: %s", receive_addr, receive_buffer);
-			} else if(receive_addr == 0xFF) {
-				printf("--> Received broadcast message: %s", receive_buffer);
+			if((receive_buffer[2] == SENDER_ADDR1) || (receive_buffer[2] == SENDER_ADDR2) || (receive_buffer[2] == SENDER_ADDR3) || (receive_buffer[2] == SENDER_ADDR4)) {
+				printf("--> Last received message (from node %d): %s\n", receive_buffer[1], receive_buffer+5);
+				for (int i = 0; i < 260; i++) {
+					receive_buffer[i] = 0;
+				}
+			} else if(receive_buffer[2] == 0xFF) {
+				printf("--> Last received message (broadcast): %s\n", receive_buffer+5);
+				for (int i = 0; i < 260; i++) {
+					receive_buffer[i] = 0;
+				}
 			} else {
 				printf("--> No messages at this time\n");
 			}
@@ -533,57 +547,29 @@ void console_input(char* input) {
 	} else if(input[0] == 's') {
 		char cmd[3];
 		uint8_t dest_addr = 0;
-		char message[256];
-		sscanf(input, "%s %hhd %255s", cmd, &dest_addr, message);
+		//char message[256];
+		//sscanf(input, "%s %hhd %255s", cmd, &dest_addr, message);
+		char temp_input[263];
+		strncpy(temp_input, input, 255);
+		char* space_ptr = strchr(temp_input, ' ');
+		space_ptr++;
+		if(space_ptr != NULL) {
+			strncpy(cmd, temp_input, 2);
+		}
+		char temp_input2[263];
+		strncpy(temp_input2, space_ptr, 263);
+		space_ptr = strchr(temp_input2, ' ');
+		space_ptr++;
+		char dest_addr_str[10];
+		if(space_ptr != NULL) {
+			strncpy(dest_addr_str, temp_input2, space_ptr-temp_input2);
+			dest_addr = (uint8_t)strtol(dest_addr_str, NULL, 10);
+		}
 		if(cmd[1] == 'x') {
 			if(dest_addr == 0xFF) {
-				printf("--> Broadcasting hex message: 0x%s", message);
+				printf("--> Broadcasting hex message: 0x%s", space_ptr);
 			} else {
-				printf("--> Sending hex message to node %d: 0x%s", dest_addr, message);
-			}
-			// Add preamble + source addr
-		    transmit_buffer[0] = PREAMBLE;
-		    transmit_buffer[1] = SENDER_ADDR1;
-		    transmit_buffer[2] = dest_addr;
-
-		    // Length of message
-		    //uint8_t length = strlen(space_ptr + 1); // Skips past the space
-		    transmit_buffer[3] = strlen(message)/2;
-		    transmit_buffer[4] = BLANK_CRC;
-
-		    char hex_conversion[256];
-	    	uint16_t index = 0;
-		    uint16_t conversion_index = 0;
-		    //Converts each hex character to binary, adds them to regular transmit
-		    //buffer so that 1 char = 2 hex characters
-		    while((index < 255) && (message[index] != '\n') && (message[index] != '\r')) {
-			    uint8_t hex1 = 16;
-			    while((index < 255) && (hex1 >= 16)) {
-				    hex1 = charToBinary(message[index]);
-				    index++;
-			    }
-			    uint8_t hex2 = 16;
-			    while((index < 255) && (hex2 >= 16)) {
-				    hex2 = charToBinary(message[index]);
-				    index++;
-			    }
-			    if(hex1 >= 16) {
-				    hex1 = 0;
-			    }
-			    if(hex2 >= 16) {
-				    hex2 = 0;
-			    }
-			    hex_conversion[conversion_index] = (hex1<<4)|(hex2);
-			    conversion_index++;
-		    }
-		    strncpy((char*)&transmit_buffer[5], hex_conversion, 255);
-		    transmit_buffer[conversion_index+5] = BLANK_CRC;
-		    transmitting = true;
-		} else if(cmd[1] == '\0') {
-			if(dest_addr == 0xFF) {
-				printf("--> Broadcasting message: %s", message);
-			} else {
-				printf("--> Sending message to node %d: %s", dest_addr, message);
+				printf("--> Sending hex message to node %d: 0x%s", dest_addr, space_ptr);
 			}
 			// Add preamble + source addr
 			transmit_buffer[0] = PREAMBLE;
@@ -591,17 +577,63 @@ void console_input(char* input) {
 			transmit_buffer[2] = dest_addr;
 
 			// Length of message
-			uint8_t length = strlen(message); // Skips past the space
+			//uint8_t length = strlen(space_ptr + 1); // Skips past the space
+			transmit_buffer[3] = strlen(space_ptr)/2;
+			transmit_buffer[4] = BLANK_CRC;
+
+			char hex_conversion[256];
+			uint16_t index = 0;
+			uint16_t conversion_index = 0;
+			//Converts each hex character to binary, adds them to regular transmit
+			//buffer so that 1 char = 2 hex characters
+			while((index < 255) && (space_ptr[index] != '\n') && (space_ptr[index] != '\r')) {
+				uint8_t hex1 = 16;
+				while((index < 255) && (hex1 >= 16)) {
+					hex1 = charToBinary(space_ptr[index]);
+					index++;
+				}
+				uint8_t hex2 = 16;
+				while((index < 255) && (hex2 >= 16)) {
+					hex2 = charToBinary(space_ptr[index]);
+					index++;
+				}
+				if(hex1 >= 16) {
+					hex1 = 0;
+				}
+				if(hex2 >= 16) {
+					hex2 = 0;
+				}
+				hex_conversion[conversion_index] = (hex1<<4)|(hex2);
+				conversion_index++;
+			}
+			hex_conversion[conversion_index] = '\n';
+			strncpy((char*)&transmit_buffer[5], hex_conversion, 255);
+			transmit_buffer[conversion_index+5] = '\n';
+			transmit_buffer[conversion_index+6] = BLANK_CRC;
+			transmitting = true;
+		} else if((cmd[1] == '\0') || (cmd[1] == ' ')) {
+			if(dest_addr == 0xFF) {
+				printf("--> Broadcasting message: %s", space_ptr);
+			} else {
+				printf("--> Sending message to node %d: %s", dest_addr, space_ptr);
+			}
+			// Add preamble + source addr
+			transmit_buffer[0] = PREAMBLE;
+			transmit_buffer[1] = SENDER_ADDR1;
+			transmit_buffer[2] = dest_addr;
+
+			// Length of message
+			uint8_t length = strlen(space_ptr); // Skips past the space
 			transmit_buffer[3] = length;
 			transmit_buffer[4] = BLANK_CRC;
-		    // Copy input to transmit buffer starting from the 6th position
-		    strncpy((char*)&transmit_buffer[5], message, length); // Skip destination address
+			// Copy input to transmit buffer starting from the 6th position
+			strncpy((char*)&transmit_buffer[5], space_ptr, length); // Skip destination address
 
-		    // Empty CRC8 field after message for now
-		    if(length < 256) {
-		    	transmit_buffer[length + 5] = BLANK_CRC;
-		    }
-		    transmitting = true;
+			// Empty CRC8 field after message for now
+			if(length < 256) {
+				transmit_buffer[length + 5] = BLANK_CRC;
+			}
+			transmitting = true;
 		} else {
 			printf("--> Error: Invalid command\n");
 		}
@@ -665,7 +697,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 					bit_count = 0;
 
 					//check for buffer full
-					if(receive_index > 255) {
+					if(receive_index > 260) {
 						//end_reception_flag = true;
 						end_reception();
 					}
@@ -674,7 +706,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 					//byte 0 is preamble (ignore, just helpful for collision detection)
 					//byte 1 is sender address
 					//byte 2 is destination address (check if broadcast or for this node)
-					if(receive_index == 2) {
+					if(receive_index == 3) {
 						receive_addr = receive_buffer[2];
 						if((receive_addr != SENDER_ADDR1) && (receive_addr != SENDER_ADDR2) && (receive_addr != SENDER_ADDR3) && (receive_addr != SENDER_ADDR4) && (receive_addr != 0xFF)) { //not this node or not broadcast
 							//not for this node
@@ -735,6 +767,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		//IDLE
     		CurrentState = IDLE_STATE;
     		change_lights_flag = 1;
+    		updateStateLights();
     		if(receiving) {
     			//end_reception_flag = true;
     			end_reception();
@@ -765,7 +798,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		 if(manchester_bit_count == 0) {
 			HAL_TIM_Base_Stop_IT(&htim3);
 			transmitting = false;
-			console_up = true;
+			console_up = false;
 			backoff_counter = 0;
 			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
 		} else {
