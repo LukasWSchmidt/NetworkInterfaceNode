@@ -430,7 +430,7 @@ void SystemClock_Config(void)
 //helper function for ending reception and printing buffered message
 void end_reception() {
 	//end_reception_flag = false;
-	receiving = false;
+	//receiving = false;
 //	if ((receive_index > 0) && (CurrentState == 0)) {
 //		printf("Received: %s\n", receive_buffer);
 //		for (int i = 0; i < receive_index; i++) {
@@ -749,13 +749,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 			 // Transition to BUSY_STATE and start reception
 			 CurrentState = BUSY_STATE;
 			 change_lights_flag = 1;
-			 receiving = true;
-			 end_reception_flag = false;
-			 receive_index = 0;
-			 current_partial_byte = 0;
-			 bit_count = 1;
-			 previous_capture_val = capture_val;
-			 middle_bit = true;
+			 if(!receiving) {
+				 receiving = true;
+				 end_reception_flag = false;
+				 receive_index = 0;
+				 current_partial_byte = 0;
+				 bit_count = 1;
+				 previous_capture_val = capture_val;
+				 middle_bit = true;
+			 }
 		}
 	}
 }
@@ -775,6 +777,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		updateStateLights();
     		if(receiving) {
     			end_reception_flag = true;
+    			receiving = false;
     			end_reception();
     		}
    			if(transmitting) {
@@ -788,6 +791,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
 			backoff_delay = true;
     		if(receiving) {
     			end_reception_flag = true;
+    			receiving = false;
     			end_reception();
     		}
     		transmitting = false;

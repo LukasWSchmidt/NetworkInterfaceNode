@@ -8,8 +8,8 @@
 ../Core/Src/main.c:496:9:charToBinary	7
 ../Core/Src/main.c:507:6:begin_transmission	3
 ../Core/Src/main.c:528:6:console_input	28
-../Core/Src/main.c:651:6:HAL_TIM_IC_CaptureCallback	21
-../Core/Src/main.c:763:6:HAL_TIM_OC_DelayElapsedCallback	7
-../Core/Src/main.c:799:6:HAL_TIM_PeriodElapsedCallback	7
-../Core/Src/main.c:832:6:HAL_GPIO_EXTI_Callback	2
-../Core/Src/main.c:846:6:Error_Handler	1
+../Core/Src/main.c:651:6:HAL_TIM_IC_CaptureCallback	22
+../Core/Src/main.c:765:6:HAL_TIM_OC_DelayElapsedCallback	7
+../Core/Src/main.c:803:6:HAL_TIM_PeriodElapsedCallback	7
+../Core/Src/main.c:836:6:HAL_GPIO_EXTI_Callback	2
+../Core/Src/main.c:850:6:Error_Handler	1
