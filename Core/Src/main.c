@@ -66,7 +66,7 @@
 #define SENDER_ADDR2 0x35
 #define SENDER_ADDR3 0x36
 #define SENDER_ADDR4 0x37
-#define BLANK_CRC 0x00
+#define BLANK_CRC 0xAA
 
 /* USER CODE END PD */
 
