@@ -219,6 +219,7 @@ int main(void)
 //		  end_reception();
 //	  }
 
+	  //NEED TO REWORK - WAIT FOR IDLE
 	  //backoff code
 	  if(backoff_delay) {
 		  if(backoff_counter < 10) {
