@@ -82,7 +82,7 @@ void Error_Handler(void);
 #define ERR_LED_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-#define HALF_PERIOD 499
+#define HALF_PERIOD 503
 //#define FULL_PERIOD 999
 /* USER CODE END Private defines */
 
