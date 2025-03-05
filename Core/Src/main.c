@@ -467,6 +467,7 @@ void begin_transmission() {
 		  HAL_TIM_Base_Start_IT(&htim3);
 	  } else if((CurrentState == ERR_STATE) && (backoff_counter == 0)) {
 		  backoff_delay = true;
+		  HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
 	  }
 }
 
@@ -748,6 +749,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     		if(transmitting) {
     			transmitting = false;
     			backoff_delay = true;
+    			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
     		}
     	}
     	if(console_up) {
