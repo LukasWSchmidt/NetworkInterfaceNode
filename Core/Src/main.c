@@ -67,6 +67,7 @@
 #define SENDER_ADDR3 0x36
 #define SENDER_ADDR4 0x37
 #define BLANK_CRC 0xAA
+#define DISABLED_CRC 0x00
 
 /* USER CODE END PD */
 
@@ -525,7 +526,7 @@ void console_input(char* input) {
 			// Length of message
 			//uint8_t length = strlen(space_ptr + 1); // Skips past the space
 			transmit_buffer[3] = strlen(space_ptr)/2;
-			transmit_buffer[4] = BLANK_CRC;
+			transmit_buffer[4] = DISABLED_CRC;
 
 			char hex_conversion[256];
 			uint16_t index = 0;
@@ -554,8 +555,8 @@ void console_input(char* input) {
 			}
 			hex_conversion[conversion_index] = '\n';
 			strncpy((char*)&transmit_buffer[5], hex_conversion, 255);
-			transmit_buffer[conversion_index+5] = '\n';
-			transmit_buffer[conversion_index+6] = BLANK_CRC;
+			transmit_buffer[conversion_index+5] = BLANK_CRC;
+			transmit_buffer[conversion_index+6] = '\n';
 			transmitting = true;
 		} else if((cmd[1] == '\0') || (cmd[1] == ' ')) {
 			if(dest_addr == 0xFF) {
@@ -569,15 +570,16 @@ void console_input(char* input) {
 			transmit_buffer[2] = dest_addr;
 
 			// Length of message
-			uint8_t length = strlen(space_ptr); // Skips past the space
+			uint8_t length = strlen(space_ptr) - 1; // Skips past the space
 			transmit_buffer[3] = length;
-			transmit_buffer[4] = BLANK_CRC;
+			transmit_buffer[4] = DISABLED_CRC;
 			// Copy input to transmit buffer starting from the 6th position
 			strncpy((char*)&transmit_buffer[5], space_ptr, length); // Skip destination address
 
 			// Empty CRC8 field after message for now
 			if(length < 256) {
 				transmit_buffer[length + 5] = BLANK_CRC;
+				transmit_buffer[length + 6] = '\n';
 			}
 			transmitting = true;
 		} else {
