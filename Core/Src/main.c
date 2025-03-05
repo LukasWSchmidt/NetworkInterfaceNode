@@ -482,7 +482,7 @@ void console_input(char* input) {
 					receive_buffer[i] = 0;
 				}
 			} else if(receive_buffer[2] == 0xFF) {
-				printf("--> Last received message (broadcast): %s\n", receive_buffer+5);
+				printf("--> Last received message (broadcast, from node %d): %s\n", receive_buffer[1], receive_buffer+5);
 				for (int i = 0; i < 260; i++) {
 					receive_buffer[i] = 0;
 				}
