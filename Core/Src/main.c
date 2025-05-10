@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* USER CODE END Includes */
 
@@ -52,6 +53,21 @@
 
 #define MASK_16_BITS 0x0000FFFF
 #define MASK_17_BITS 0x00007FFF
+
+//min an max based off of 1.32% tolerance
+#define HALF_BIT_DELTA_MIN 487
+#define HALF_BIT_DELTA_MAX 520
+
+#define FULL_BIT_DELTA_MIN 974
+#define FULL_BIT_DELTA_MAX 1046
+
+#define PREAMBLE 0x55
+#define SENDER_ADDR1 0x34
+#define SENDER_ADDR2 0x35
+#define SENDER_ADDR3 0x36
+#define SENDER_ADDR4 0x37
+#define BLANK_CRC 0xAA
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -97,13 +113,34 @@ volatile int CurrentState = IDLE_STATE;
 uint8_t pinValue = 0;
 volatile bool transmitting = false;
 
-volatile char transmit_buffer[255];
+volatile char transmit_buffer[260];
 volatile uint32_t manchester_buffer = 0;
 volatile uint8_t manchester_bit_count = 0;
 volatile uint8_t transmit_buffer_index = 0;
 volatile bool end_of_transmission = false;
+uint8_t destination_addr = 0xFF; //default to broadcast
 
 volatile bool blue_debug_mode = false;
+
+//Receiver Variables
+volatile uint32_t previous_capture_val = 0;
+volatile uint8_t current_partial_byte = 0;
+volatile uint8_t bit_count = 0;
+volatile char receive_buffer[260];
+volatile uint8_t receive_index = 0;
+volatile bool receiving = false;
+volatile uint32_t current_pin_state = 1;
+volatile uint8_t change_lights_flag = 0; //1 when lights need changing
+volatile bool end_reception_flag = false;
+uint16_t backoff_counter = 0;
+bool backoff_delay = false;
+bool receive_printed = false;
+volatile uint8_t receive_addr = 0;
+
+volatile bool middle_bit = true;
+
+volatile bool console_up = true;
+
 
 PUTCHAR_PROTOTYPE
 {
@@ -121,6 +158,9 @@ GETCHAR_PROTOTYPE
 void updateStateLights();
 uint16_t getNextTransmissionChar(bool first);
 uint8_t charToBinary(char c);
+void end_reception();
+void begin_transmission();
+void console_input();
 
 /* USER CODE END 0 */
 
@@ -161,16 +201,86 @@ int main(void)
   /* USER CODE BEGIN 2 */
   CurrentState = IDLE_STATE;
   updateStateLights();
+
+  HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	//Receiver Code
+	  //printf("Sanity Check");
+
+//	  if(end_reception_flag){
+//		  end_reception();
+//	  }
+
+	  //backoff code
+	  if(backoff_delay) {
+		  if(backoff_counter < 10) {
+			//delay random time between 0 and 1000ms
+			HAL_Delay((rand() % 1000));
+			//attempt to transmit again
+			printf("\n--> Message failed to send. Retrying, attempt %d\n", backoff_counter);
+			begin_transmission();
+			backoff_counter++;
+//			transmitting = true;
+//			manchester_buffer = 0;
+//		  	transmit_buffer_index = 0;
+//		  	end_of_transmission = false;
+//		 	manchester_buffer = getNextTransmissionChar(true);
+//		  	manchester_bit_count += 16;
+//		  	uint16_t temp = getNextTransmissionChar(false);
+//		  	if(temp != 0) {
+//			  manchester_buffer |= (temp<<16);
+//			  manchester_bit_count += 16;
+//		  	} else {
+//			  end_of_transmission = true;
+//		  	}
+//		  	if(CurrentState == IDLE_STATE) {
+//			  __HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+//			  __HAL_TIM_SET_COUNTER(&htim3, 0);
+//			  HAL_TIM_Base_Start_IT(&htim3);
+//		  	}
+		} else {
+			//backoff failed after 10 attempts
+			backoff_delay = false;
+			backoff_counter = 0;
+			//print failed to transmit message
+			printf("\n--> Failed to transmit message after 10 attempts\n");
+			transmitting = false;
+			console_up = true;
+			//return to idle state
+			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
+			//CurrentState = IDLE_STATE;
+			change_lights_flag = 1;
+		}
+	  }
+
+
+	  if(end_of_transmission && !transmitting) {
+		  end_of_transmission = false;
+		  console_up = true;
+		  printf("--> Message sent\n");
+	  }
+	  if(change_lights_flag == 1){
+		  updateStateLights();
+	  }
+	  if(console_up) {
+		  printf("CMD> ");
+		  char temp_input[263];
+		  //updateStateLights();
+		  fgets(temp_input, 262, stdin);
+		  console_input(temp_input);
+	  }
+
 	  //printf("Captured Val: %i\tCurrent State: %i\tPin Value: %d\n", capture_val, CurrentState, pinValue);
 	  //HAL_Delay(1000);
-	  if(!transmitting) {
+	  /*if(!transmitting) {
 		  char temp_input[255];
 		  if(blue_debug_mode) {
 			  //invalid characters are skipped without inserting a 0
@@ -206,31 +316,61 @@ int main(void)
 			  strncpy(transmit_buffer, hex_conversion, 255);
 			  transmit_buffer[conversion_index] = '\n';
 		  } else {
-			  printf("Enter regular text to transmit: ");
+			  printf("Enter text to transmit(destination addr first): ");
 			  fgets(temp_input, 255, stdin);
-			  strncpy(transmit_buffer, temp_input, 255);
-			  printf("Message sent\n");
-		  }
-		  transmitting = true;
-		  manchester_buffer = 0;
-		  transmit_buffer_index = 0;
-		  end_of_transmission = false;
-		  manchester_buffer = getNextTransmissionChar(true);
-		  manchester_bit_count += 16;
-		  uint16_t temp = getNextTransmissionChar(false);
-		  if(temp != 0) {
-			  manchester_buffer |= (temp<<16);
-			  manchester_bit_count += 16;
-		  } else {
-			  end_of_transmission = true;
-		  }
-		  if(CurrentState == IDLE_STATE) {
-			  __HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
-			  __HAL_TIM_SET_COUNTER(&htim3, 0);
-			  HAL_TIM_Base_Start_IT(&htim3);
-		  }
 
-	  }
+			  // Find the first space in the input
+			  char *space_ptr = strchr(temp_input, ' ');
+			  if (space_ptr != NULL) {
+				  // Extract the destination address substring
+				  char dest_addr_str[10];
+				  strncpy(dest_addr_str, temp_input, space_ptr - temp_input);
+				  dest_addr_str[space_ptr - temp_input] = '\0';
+
+				  // Convert the destination address to binary (takes entire byte not just first bit)
+				  destination_addr = (uint8_t)strtol(dest_addr_str, NULL, 16);
+
+				  // Add preamble + source addr
+				  transmit_buffer[0] = PREAMBLE;
+				  transmit_buffer[1] = SENDER_ADDR;
+				  transmit_buffer[2] = destination_addr;
+
+				  // Length of message
+				  uint8_t length = strlen(space_ptr + 1); // Skips past the space
+				  transmit_buffer[3] = length;
+				  transmit_buffer[4] = BLANK_CRC;
+
+				  // Copy input to transmit buffer starting from the 6th position
+				  strncpy((char*)&transmit_buffer[5], space_ptr + 1, length); // Skip destination address
+
+				  // Empty CRC8 field after message for now
+				  transmit_buffer[length + 5] = BLANK_CRC;
+				  printf("Message sent\n");
+			  } else {
+				  printf("Invalid input format.\nPlease enter destination addr followed by a space then message.\n");
+			  }
+		  }
+		  begin_transmission();
+//		  transmitting = true;
+//		  manchester_buffer = 0;
+//		  transmit_buffer_index = 0;
+//		  end_of_transmission = false;
+//		  manchester_buffer = getNextTransmissionChar(true);
+//		  manchester_bit_count += 16;
+//		  uint16_t temp = getNextTransmissionChar(false);
+//		  if(temp != 0) {
+//			  manchester_buffer |= (temp<<16);
+//			  manchester_bit_count += 16;
+//		  } else {
+//			  end_of_transmission = true;
+//		  }
+//		  if(CurrentState == IDLE_STATE) {
+//			  __HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+//			  __HAL_TIM_SET_COUNTER(&htim3, 0);
+//			  HAL_TIM_Base_Start_IT(&htim3);
+//		  }
+
+	  }*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -286,7 +426,29 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+
+//helper function for ending reception and printing buffered message
+void end_reception() {
+	//end_reception_flag = false;
+	//receiving = false;
+//	if ((receive_index > 0) && (CurrentState == 0)) {
+//		printf("Received: %s\n", receive_buffer);
+//		for (int i = 0; i < receive_index; i++) {
+//			receive_buffer[i] = 0;
+//		}
+//	}
+	if(receive_index < 259) {
+		receive_buffer[receive_index] = '\0';
+	}
+	receive_index = 0;
+	bit_count = 0;
+	current_partial_byte = 0;
+	middle_bit = true;
+}
+
+
 void updateStateLights(){
+	change_lights_flag = 0;
 	if(CurrentState == 0){
 		//IDLE LED
 		//gpioa->odr |= (001<<IDLE_LED_Pin);
@@ -342,10 +504,164 @@ uint8_t charToBinary(char c) {
 	return 255;
 }
 
+void begin_transmission() {
+	  //transmitting = true;
+	  manchester_buffer = 0;
+	  transmit_buffer_index = 0;
+	  end_of_transmission = false;
+	  manchester_buffer = getNextTransmissionChar(true);
+	  manchester_bit_count += 16;
+	  uint16_t temp = getNextTransmissionChar(false);
+	  if(temp != 0) {
+		  manchester_buffer |= (temp<<16);
+		  manchester_bit_count += 16;
+	  } else {
+		  end_of_transmission = true;
+	  }
+	  if(CurrentState == IDLE_STATE) {
+		  __HAL_TIM_SET_AUTORELOAD(&htim3, HALF_PERIOD);
+		  __HAL_TIM_SET_COUNTER(&htim3, 0);
+		  HAL_TIM_Base_Start_IT(&htim3);
+	  }
+}
+
+void console_input(char* input) {
+	printf(input);
+	if(input[0] == 'r') {
+		if(!receive_printed) {
+			if(receive_buffer[0] == 'U') {
+				if((receive_buffer[2] == SENDER_ADDR1) || (receive_buffer[2] == SENDER_ADDR2) || (receive_buffer[2] == SENDER_ADDR3) || (receive_buffer[2] == SENDER_ADDR4)) {
+					printf("--> Last received message (from node %d): %s\n", receive_buffer[1], receive_buffer+5);
+					for (int i = 0; i < 260; i++) {
+						receive_buffer[i] = 0;
+					}
+				} else if(receive_buffer[2] == 0xFF) {
+					printf("--> Last received message (broadcast): %s\n", receive_buffer+5);
+					for (int i = 0; i < 260; i++) {
+						receive_buffer[i] = 0;
+					}
+				} else {
+					printf("--> No messages at this time\n");
+
+				}
+			}
+			else {
+				printf("--> No messages at this time\n");
+			}
+		} else {
+			printf("--> No messages at this time\n");
+		}
+	} else if(input[0] == 's') {
+		char cmd[3];
+		uint8_t dest_addr = 0;
+		//char message[256];
+		//sscanf(input, "%s %hhd %255s", cmd, &dest_addr, message);
+		char temp_input[263];
+		strncpy(temp_input, input, 255);
+		char* space_ptr = strchr(temp_input, ' ');
+		space_ptr++;
+		if(space_ptr != NULL) {
+			strncpy(cmd, temp_input, 2);
+		}
+		char temp_input2[263];
+		strncpy(temp_input2, space_ptr, 263);
+		space_ptr = strchr(temp_input2, ' ');
+		space_ptr++;
+		char dest_addr_str[10];
+		if(space_ptr != NULL) {
+			strncpy(dest_addr_str, temp_input2, space_ptr-temp_input2);
+			dest_addr = (uint8_t)strtol(dest_addr_str, NULL, 10);
+		}
+		if(cmd[1] == 'x') {
+			if(dest_addr == 0xFF) {
+				printf("--> Broadcasting hex message: 0x%s", space_ptr);
+			} else {
+				printf("--> Sending hex message to node %d: 0x%s", dest_addr, space_ptr);
+			}
+			// Add preamble + source addr
+			transmit_buffer[0] = PREAMBLE;
+			transmit_buffer[1] = SENDER_ADDR1;
+			transmit_buffer[2] = dest_addr;
+
+			// Length of message
+			//uint8_t length = strlen(space_ptr + 1); // Skips past the space
+			transmit_buffer[3] = strlen(space_ptr)/2;
+			transmit_buffer[4] = BLANK_CRC;
+
+			char hex_conversion[256];
+			uint16_t index = 0;
+			uint16_t conversion_index = 0;
+			//Converts each hex character to binary, adds them to regular transmit
+			//buffer so that 1 char = 2 hex characters
+			while((index < 255) && (space_ptr[index] != '\n') && (space_ptr[index] != '\r')) {
+				uint8_t hex1 = 16;
+				while((index < 255) && (hex1 >= 16)) {
+					hex1 = charToBinary(space_ptr[index]);
+					index++;
+				}
+				uint8_t hex2 = 16;
+				while((index < 255) && (hex2 >= 16)) {
+					hex2 = charToBinary(space_ptr[index]);
+					index++;
+				}
+				if(hex1 >= 16) {
+					hex1 = 0;
+				}
+				if(hex2 >= 16) {
+					hex2 = 0;
+				}
+				hex_conversion[conversion_index] = (hex1<<4)|(hex2);
+				conversion_index++;
+			}
+			hex_conversion[conversion_index] = '\n';
+			strncpy((char*)&transmit_buffer[5], hex_conversion, 255);
+			transmit_buffer[conversion_index+5] = '\n';
+			transmit_buffer[conversion_index+6] = BLANK_CRC;
+			transmitting = true;
+		} else if((cmd[1] == '\0') || (cmd[1] == ' ')) {
+			if(dest_addr == 0xFF) {
+				printf("--> Broadcasting message: %s", space_ptr);
+			} else {
+				printf("--> Sending message to node %d: %s", dest_addr, space_ptr);
+			}
+			// Add preamble + source addr
+			transmit_buffer[0] = PREAMBLE;
+			transmit_buffer[1] = SENDER_ADDR1;
+			transmit_buffer[2] = dest_addr;
+
+			// Length of message
+			uint8_t length = strlen(space_ptr); // Skips past the space
+			transmit_buffer[3] = length;
+			transmit_buffer[4] = BLANK_CRC;
+			// Copy input to transmit buffer starting from the 6th position
+			strncpy((char*)&transmit_buffer[5], space_ptr, length); // Skip destination address
+
+			// Empty CRC8 field after message for now
+			if(length < 256) {
+				transmit_buffer[length + 5] = BLANK_CRC;
+			}
+			transmitting = true;
+		} else {
+			printf("--> Error: Invalid command\n");
+		}
+		if(transmitting) {
+			begin_transmission();
+			console_up = false;
+		}
+
+	} else {
+		printf("--> Error: Invalid command\n");
+	}
+}
+
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	//BUSY!
 	if (htim->Instance == TIM2) { // Ensure it's TIM2
-	        capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+		capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+		if (CurrentState == BUSY_STATE && receiving){
+
+
+			//capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 
 	        // Compute the next compare value with delay
 	        compare_val = (capture_val + delay_us) % TIMER_MAX;
@@ -356,30 +672,132 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	        // Start Output Compare interrupt
 	        HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_2);
 
+	        current_pin_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 	        //Changes LED's for busy state
 	    	CurrentState = BUSY_STATE;
-	    	updateStateLights();
+	    	change_lights_flag = 1;
+
+	    	if(!end_reception_flag) {
+			//Receiver Code
+				uint32_t delta = capture_val - previous_capture_val;
+				previous_capture_val = capture_val;
+
+
+			//check for edge timing in correct range
+				if((delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX) || (delta >= FULL_BIT_DELTA_MIN && delta <= FULL_BIT_DELTA_MAX)) {
+					//build current received byte
+					if(delta >= HALF_BIT_DELTA_MIN && delta <= HALF_BIT_DELTA_MAX){
+						if(middle_bit) {
+							current_partial_byte = (current_partial_byte << 1) | current_pin_state; // Repeat the previous bit
+							bit_count++;
+						}
+						middle_bit = !middle_bit;
+					} else {
+						current_partial_byte = (current_partial_byte << 1) | current_pin_state;
+						middle_bit = false;
+						bit_count++;
+					}
+
+					//Once 8 bits put byte into buffer
+					if(bit_count >= 8){
+						receive_buffer[receive_index] = current_partial_byte;
+						receive_index++;
+						current_partial_byte = 0;
+						bit_count = 0;
+
+						//check for buffer full
+						if(receive_index > 260) {
+							end_reception_flag = true;
+							end_reception();
+						}
+
+						//check byte for message detail
+						//byte 0 is preamble (ignore, just helpful for collision detection)
+						//byte 1 is sender address
+						//byte 2 is destination address (check if broadcast or for this node)
+						if(receive_index == 3) {
+							receive_addr = receive_buffer[2];
+							if((receive_addr != SENDER_ADDR1) && (receive_addr != SENDER_ADDR2) && (receive_addr != SENDER_ADDR3) && (receive_addr != SENDER_ADDR4) && (receive_addr != 0xFF)) { //not this node or not broadcast
+								//not for this node
+								end_reception_flag = true;
+								end_reception();
+								CurrentState = IDLE_STATE;
+								change_lights_flag = 1;
+								//clear buffer
+	//							for (int i = 0; i < receive_index; i++) {
+	//								receive_buffer[i] = 0;
+	//							}
+							}
+						}
+						//Ignore CRC for now
+
+
+
+					}
+				} else {
+					//timing was out of expected range
+					CurrentState = ERR_STATE;
+					change_lights_flag = 1;
+					if(receiving) {
+						end_reception_flag = true;
+						end_reception();
+					}
+				}
+	    	}
+		} else if(CurrentState == IDLE_STATE) {
+			//First edge (starting receiving)
+			 // Initial edge detection (start of reception)
+			 //capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			 compare_val = (capture_val + delay_us) % TIMER_MAX;
+			 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, compare_val);
+			 HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_2);
+ 
+			 // Transition to BUSY_STATE and start reception
+			 CurrentState = BUSY_STATE;
+			 change_lights_flag = 1;
+			 receiving = true;
+			 end_reception_flag = false;
+			 receive_index = 0;
+			 current_partial_byte = 0;
+			 bit_count = 1;
+			 previous_capture_val = capture_val;
+			 middle_bit = true;
+		}
 	}
 }
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-	HAL_TIM_Base_Stop_IT(&htim3);
+	//HAL_TIM_Base_Stop_IT(&htim3);
+	//uint32_t test_capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 	if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
         //Error or Idle, do Idle pattern if line is high
 
-    	//pinValue = gpioa->idr(0b1 & (1<<15));
+		//uint32_t test_capture_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
     	pinValue = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
     	if(pinValue == 1){
     		//IDLE
     		CurrentState = IDLE_STATE;
+    		change_lights_flag = 1;
     		updateStateLights();
-    		if(transmitting) {
-    			HAL_TIM_Base_Start_IT(&htim3);
+    		if(receiving) {
+    			end_reception_flag = true;
+    			receiving = false;
+    			end_reception();
     		}
+   			if(transmitting) {
+    			HAL_TIM_Base_Start_IT(&htim3);
+   			}
     	} else {
-    		//HAL_TIM_Base_Stop_IT(&htim3);
     		CurrentState = ERR_STATE;
-    		updateStateLights();
+    		change_lights_flag = 1;
+			//Random backoff on collision
+			//backoff_counter++;
+			backoff_delay = true;
+    		if(receiving) {
+    			end_reception_flag = true;
+    			receiving = false;
+    			end_reception();
+    		}
     		transmitting = false;
     	}
 
@@ -393,6 +811,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		 if(manchester_bit_count == 0) {
 			HAL_TIM_Base_Stop_IT(&htim3);
 			transmitting = false;
+			console_up = false;
+			backoff_counter = 0;
 			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, 1);
 		} else {
 			HAL_GPIO_WritePin(TRANSMIT_GPIO_Port, TRANSMIT_Pin, (manchester_buffer & 0b1));
